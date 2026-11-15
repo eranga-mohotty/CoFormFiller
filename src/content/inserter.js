@@ -1,24 +1,17 @@
 /**
  * Framework-Aware DOM Inserter for SmartForm AI
- * Overrides prototype setters and triggers synthetic bubbles events
- * so React, Vue, Angular, Svelte and vanilla forms accept changes immediately.
  */
 
-/**
- * Normalize dates to HTML5 required YYYY-MM-DD
- */
 export function normalizeDateValue(raw) {
   if (!raw) return '';
   const str = String(raw).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
 
-  // DD/MM/YYYY or DD-MM-YYYY
   const dmy = str.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})$/);
   if (dmy) {
     return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
   }
 
-  // YYYY/MM/DD
   const ymd = str.match(/^(\d{4})[\/\.-](\d{1,2})[\/\.-](\d{1,2})$/);
   if (ymd) {
     return `${ymd[1]}-${ymd[2].padStart(2, '0')}-${ymd[3].padStart(2, '0')}`;
@@ -35,15 +28,11 @@ export function normalizeDateValue(raw) {
   return str;
 }
 
-/**
- * Normalize time strings to 24h HH:MM format
- */
 export function normalizeTimeValue(raw) {
   if (!raw) return '';
   const str = String(raw).trim();
   if (/^([01]\d|2[0-3]):[0-5]\d$/.test(str)) return str;
 
-  // 12h with AM/PM (e.g. 7:00 AM, 7am, 6:30pm)
   const match = str.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
   if (match) {
     let hours = parseInt(match[1], 10);
@@ -62,11 +51,8 @@ export function setNativeValue(element, value) {
   const type = (element.type || '').toLowerCase();
   let normalizedValue = value;
 
-  if (type === 'date') {
-    normalizedValue = normalizeDateValue(value);
-  } else if (type === 'time') {
-    normalizedValue = normalizeTimeValue(value);
-  }
+  if (type === 'date') normalizedValue = normalizeDateValue(value);
+  else if (type === 'time') normalizedValue = normalizeTimeValue(value);
 
   const isInput = typeof window !== 'undefined' && window.HTMLInputElement && element instanceof window.HTMLInputElement;
   const isTextArea = typeof window !== 'undefined' && window.HTMLTextAreaElement && element instanceof window.HTMLTextAreaElement;
@@ -88,17 +74,14 @@ export function setNativeValue(element, value) {
     element.textContent = normalizedValue;
   }
 
-  // Dispatch events to notify reactive framework listeners
   element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
   element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
   element.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
 }
 
-export function setCheckboxOrRadio(element, targetChecked) {
+function setCheckboxOrRadio(element, targetChecked) {
   if (element.checked !== targetChecked) {
-    // Native click triggers reactive state listeners without the double-inversion bug
     element.click();
-    // Fallback if click was prevented or framework didn't toggle
     if (element.checked !== targetChecked) {
       element.checked = targetChecked;
       element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
@@ -106,13 +89,11 @@ export function setCheckboxOrRadio(element, targetChecked) {
   }
 }
 
-export function setSelectValue(selectElement, targetValue) {
+function setSelectValue(selectElement, targetValue) {
   if (!selectElement || !targetValue) return false;
   const strTarget = String(targetValue).trim().toLowerCase();
-
   let matchedOption = null;
 
-  // 1. Exact value match
   for (const opt of selectElement.options) {
     if (opt.value.trim().toLowerCase() === strTarget) {
       matchedOption = opt;
@@ -120,7 +101,6 @@ export function setSelectValue(selectElement, targetValue) {
     }
   }
 
-  // 2. Visible text exact or substring match
   if (!matchedOption) {
     for (const opt of selectElement.options) {
       const optText = (opt.text || '').trim().toLowerCase();
@@ -138,25 +118,49 @@ export function setSelectValue(selectElement, targetValue) {
     selectElement.dispatchEvent(new Event('change', { bubbles: true }));
     return true;
   }
-
   return false;
 }
 
-/**
- * Apply visual glowing highlight to an element
- */
-export function applyHighlight(element, tier = 'tier2', durationMs = 2500) {
+function applyHighlight(element, tier = 'tier2', durationMs = 2500) {
   const className = tier === 'tier1' ? 'smartform-fill-highlight-tier1' : 'smartform-fill-highlight-tier2';
   element.classList.add(className);
-
   setTimeout(() => {
     element.classList.remove(className);
   }, durationMs);
 }
 
-/**
- * Apply all resolved fills to the DOM
- */
+function fillSingleElement(el, info, fill, tier, highlightDuration) {
+  if (info.tag === 'select') {
+    const val = fill.value !== undefined ? fill.value : '';
+    if (val !== null && val !== '' && setSelectValue(el, val)) {
+      applyHighlight(el, tier, highlightDuration);
+      return 1;
+    }
+  } else if (info.type === 'checkbox') {
+    const valStr = String(fill.value || '').toLowerCase();
+    const shouldCheck = fill.checked === true || valStr === 'true' || valStr === '1' || valStr === 'yes' || (valStr && valStr === el.value.toLowerCase());
+    if (shouldCheck) {
+      setCheckboxOrRadio(el, true);
+      applyHighlight(el.closest('label') || el, tier, highlightDuration);
+      return 1;
+    }
+  } else if (info.type === 'radio') {
+    const valStr = String(fill.value || '').toLowerCase();
+    if (fill.checked === true || (valStr && el.value.toLowerCase() === valStr)) {
+      setCheckboxOrRadio(el, true);
+      applyHighlight(el.closest('label') || el, tier, highlightDuration);
+      return 1;
+    }
+  } else if (fill.value !== null && fill.value !== undefined) {
+    const stringVal = String(fill.value);
+    const finalVal = (info.maxLength && stringVal.length > info.maxLength) ? stringVal.substring(0, info.maxLength) : stringVal;
+    setNativeValue(el, finalVal);
+    applyHighlight(el, tier, highlightDuration);
+    return 1;
+  }
+  return 0;
+}
+
 export function applyFillsToDom(fills, scannedMap, options = {}) {
   const { highlightDuration = 2500 } = options;
   let filledCount = 0;
@@ -166,61 +170,10 @@ export function applyFillsToDom(fills, scannedMap, options = {}) {
     const scanned = scannedMap.get(fill.uid);
     if (!scanned || !scanned.element) continue;
 
-    const el = scanned.element;
-    const info = scanned.info;
-    const tier = fill.tier || 'tier2';
-
     try {
-      if (info.tag === 'select') {
-        const val = fill.value !== undefined ? fill.value : '';
-        if (val !== null && val !== '') {
-          const success = setSelectValue(el, val);
-          if (success) {
-            applyHighlight(el, tier, highlightDuration);
-            filledCount++;
-          }
-        }
-      } else if (info.type === 'checkbox') {
-        // If checked property is specified
-        if (typeof fill.checked === 'boolean') {
-          if (fill.checked) {
-            setCheckboxOrRadio(el, true);
-            applyHighlight(el.closest('label') || el, tier, highlightDuration);
-            filledCount++;
-          }
-        } else if (fill.value !== undefined && fill.value !== null) {
-          // Check if value matches
-          const valStr = String(fill.value).toLowerCase();
-          const shouldCheck = valStr === 'true' || valStr === '1' || valStr === 'yes' || valStr === el.value.toLowerCase();
-          if (shouldCheck) {
-            setCheckboxOrRadio(el, true);
-            applyHighlight(el.closest('label') || el, tier, highlightDuration);
-            filledCount++;
-          }
-        }
-      } else if (info.type === 'radio') {
-        const valStr = String(fill.value || '').toLowerCase();
-        if (fill.checked === true || (valStr && el.value.toLowerCase() === valStr)) {
-          setCheckboxOrRadio(el, true);
-          applyHighlight(el.closest('label') || el, tier, highlightDuration);
-          filledCount++;
-        }
-      } else {
-        // Text, textarea, email, tel, number, url, etc.
-        if (fill.value !== null && fill.value !== undefined) {
-          const stringVal = String(fill.value);
-          // respect maxLength if present
-          const finalVal = (info.maxLength && stringVal.length > info.maxLength)
-            ? stringVal.substring(0, info.maxLength)
-            : stringVal;
-
-          setNativeValue(el, finalVal);
-          applyHighlight(el, tier, highlightDuration);
-          filledCount++;
-        }
-      }
+      filledCount += fillSingleElement(scanned.element, scanned.info, fill, fill.tier || 'tier2', highlightDuration);
     } catch (err) {
-      console.warn('SmartForm AI could not fill field:', info.uid, err);
+      console.warn('SmartForm AI could not fill field:', scanned.info.uid, err);
     }
   }
 

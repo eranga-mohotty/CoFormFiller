@@ -1,0 +1,28 @@
+{
+  "name": "smartform-ai-extension",
+  "version": "1.0.0",
+  "description": "SmartForm AI - Intelligent Form Filling Agent (Manifest V3)",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "lint": "eslint src/",
+    "type-check": "tsc -p jsconfig.json",
+    "knip": "knip",
+    "test": "node test/test-importer.js && node test/test-pipeline.js && node test/test-edge-cases.js && node test/test-learning.js && node test/test-multi-provider.js && node test/test-encryption.js",
+    "verify": "npm run lint && npm run type-check && npm run knip && npm test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/chrome": "^0.3.7",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.15.0",
+    "eslint-plugin-no-unsanitized": "^4.1.5",
+    "globals": "^17.14.0",
+    "knip": "^6.45.1",
+    "typescript": "^7.0.2"
+  }
+}

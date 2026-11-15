@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@5/overview/configuration-schema.json",
+  "entry": [
+    "src/background/service-worker.js",
+    "src/content/content.js",
+    "src/content/inserter.js",
+    "src/engine/scanner.js",
+    "src/engine/pattern-matcher.js",
+    "src/options/options.js",
+    "src/popup/popup.js",
+    "test/*.js"
+  ],
+  "project": [
+    "src/**/*.js",
+    "test/**/*.js"
+  ]
+}
