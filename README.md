@@ -37,6 +37,9 @@ SmartForm AI connects directly from your browser to your chosen AI engine withou
 
 ## Key Features
 
+- **AES-256-GCM Vault Encryption & Master Password**: Protects all stored profiles, credentials, and fill logs with client-side authenticated encryption (`crypto.subtle`). Uses a random 16-byte salt and 600,000 PBKDF2 iterations to harden even short PINs against dictionary attacks.
+- **Session Caching via `chrome.storage.session`**: Unlocking with your PIN/passphrase caches the key strictly in RAM for your browser session, surviving background worker sleep cycles while auto-locking when the browser exits.
+- **Dual-Mode Backup Export**: Choose between 🔒 **Encrypted Vault Backup** (safe for cloud drives and external storage) or 📄 **Plaintext JSON** (for manual editing or scripting). Encrypted backups are automatically detected on import.
 - **100% Publishable & Privacy-First**: Starts completely clean upon installation. Zero hardcoded personal data. All profile facts, model configurations, and API keys reside strictly inside your browser's local storage (`chrome.storage.local`).
 - **Localhost Calling Support**: Chrome Extension service worker communicates with `http://localhost:11434` or `http://localhost:1234` out of the box with zero CORS issues.
 - **Strict Fill Whitelist & Deduplication**: Irrespective of the provider or model used, every single suggested field fill must pass strict client-side DOM UID whitelisting, duplicate prevention, and maximum character length capping (5,000 chars) before any DOM mutation occurs.
@@ -115,9 +118,10 @@ smartform-ai-extension/
 │   │   ├── options.js            # Controller for profiles, visual builder, import/export, logs
 │   │   └── options.css           # Dark Slate theme styling
 │   ├── services/
-│   │   └── storage.js            # Multi-profile & settings storage layer (chrome.storage.local)
+│   │   ├── crypto.js             # Native Web Crypto API wrapper (AES-256-GCM, PBKDF2)
+│   │   └── storage.js            # Multi-profile & settings storage layer with vault encryption
 │   ├── utils/
-│   │   └── importer.js           # Universal JSON parser (handles legacy & native formats)
+│   │   └── importer.js           # Universal JSON parser (handles encrypted, legacy & native formats)
 │   └── icons/
 │       ├── icon.svg              # Scalable master icon vector
 │       ├── icon16.png            # 16x16 icon
@@ -131,6 +135,19 @@ smartform-ai-extension/
     ├── test-pipeline.js          # Unit tests verifying Tier 1 matching & Tier 2 prompt building
     ├── test-edge-cases.js        # Unit tests verifying dates, times, comboboxes, and security checks
     ├── test-learning.js          # Unit tests verifying Smart Learning Mode and field guardrails
-    └── test-multi-provider.js    # Unit & integration tests for Ollama, Claude, OpenAI & Custom Endpoints
+    ├── test-multi-provider.js    # Unit & integration tests for Ollama, Claude, OpenAI & Custom Endpoints
+    └── test-encryption.js        # Unit tests for AES-256-GCM vault, PBKDF2, PINs & session caching
 ```
-```
+
+---
+
+## Developer Workflow: Trunk-Based Development
+
+To maintain a healthy, always-deployable codebase:
+1. **Trunk-Based Branches**: All commits go directly into `main` (trunk) or short-lived feature branches merged immediately upon verification.
+2. **Pre-Commit Verification**: Run the full test suite before committing:
+   ```bash
+   node test/test-importer.js && node test/test-pipeline.js && node test/test-edge-cases.js && node test/test-learning.js && node test/test-multi-provider.js && node test/test-encryption.js
+   ```
+3. **Atomic Commits**: Commit each feature when completed and verified before proceeding to the next feature.
+

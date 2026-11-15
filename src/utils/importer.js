@@ -12,11 +12,22 @@ import {
   saveSettings
 } from '../services/storage.js';
 
+import {
+  isEncryptedExport,
+  encryptExportPayload,
+  decryptExportPayload
+} from '../services/crypto.js';
+
 /**
  * Detect the format of an imported JSON object
  */
 export function detectFormat(data) {
   if (!data || typeof data !== 'object') return 'unknown';
+
+  // Encrypted SmartForm vault backup
+  if (isEncryptedExport(data)) {
+    return 'encrypted-vault';
+  }
 
   // Legacy format (from user's previous extension)
   if (data.local && (data.local.flexibleProfiles || data.local['byok-v2'])) {
@@ -229,7 +240,7 @@ function parseLegacyProfile(legacyProfile) {
  * Main Universal Ingestion Function
  * Supports mode: 'replace' (default, completely overwrites) or 'append'
  */
-export async function importConfiguration(input, mode = 'replace') {
+export async function importConfiguration(input, mode = 'replace', options = {}) {
   let parsedJson = null;
   if (typeof input === 'string') {
     try {
@@ -243,7 +254,31 @@ export async function importConfiguration(input, mode = 'replace') {
     return { success: false, message: 'No valid data provided to import.' };
   }
 
-  const format = detectFormat(parsedJson);
+  let format = detectFormat(parsedJson);
+
+  // Handle encrypted backup format
+  if (format === 'encrypted-vault') {
+    if (!options.passphrase) {
+      return {
+        success: false,
+        needsPassword: true,
+        formatDetected: 'encrypted-vault',
+        message: 'This configuration backup is encrypted with a master password. Please enter your password to restore.'
+      };
+    }
+    try {
+      parsedJson = await decryptExportPayload(parsedJson, options.passphrase);
+      format = detectFormat(parsedJson);
+    } catch (err) {
+      return {
+        success: false,
+        needsPassword: true,
+        error: 'Decryption failed: ' + err.message,
+        message: 'Incorrect password for encrypted backup.'
+      };
+    }
+  }
+
   const resultProfiles = [];
   let detectedApiKey = '';
   let detectedModel = '';
@@ -386,9 +421,9 @@ export async function importConfiguration(input, mode = 'replace') {
 }
 
 /**
- * Export all profiles and settings to a clean JSON object
+ * Export all profiles and settings to a clean JSON object (Plaintext or Encrypted Vault)
  */
-export async function exportConfiguration({ includeApiKey = false } = {}) {
+export async function exportConfiguration({ includeApiKey = false, encrypt = false, passphrase = '' } = {}) {
   const [profiles, activeProfileId, settings] = await Promise.all([
     getProfiles(),
     getActiveProfileId(),
@@ -398,13 +433,22 @@ export async function exportConfiguration({ includeApiKey = false } = {}) {
   const sanitizedSettings = { ...settings };
   if (!includeApiKey) {
     sanitizedSettings.geminiApiKey = '';
+    sanitizedSettings.openaiApiKey = '';
+    sanitizedSettings.claudeApiKey = '';
+    sanitizedSettings.customHeaders = '';
   }
 
-  return {
+  const payload = {
     smartform_version: '1.0.0',
     exportedAt: new Date().toISOString(),
     activeProfileId,
     profiles,
     settings: sanitizedSettings
   };
+
+  if (encrypt && passphrase) {
+    return encryptExportPayload(payload, passphrase);
+  }
+
+  return payload;
 }

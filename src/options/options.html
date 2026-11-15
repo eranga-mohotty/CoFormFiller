@@ -338,6 +338,16 @@
 
             <textarea id="importTextarea" class="textarea-input advanced-only" rows="8" placeholder="Paste your exported JSON here..."></textarea>
 
+            <!-- Encrypted Backup Password Prompt -->
+            <div id="importPasswordPrompt" class="field-group hidden" style="margin-top: 14px; background: rgba(30, 41, 59, 0.7); border: 1px solid #f59e0b; border-radius: 8px; padding: 14px;">
+              <label for="importPassphraseInput" style="font-weight: 600; color: #f59e0b; display: block; margin-bottom: 4px;">🔐 This backup is encrypted</label>
+              <p class="field-desc" style="margin-bottom: 8px;">Enter the Master PIN or Password used when this file was exported:</p>
+              <div style="display: flex; gap: 8px;">
+                <input type="password" id="importPassphraseInput" class="text-input" placeholder="Enter decryption password...">
+                <button type="button" id="btnDecryptImport" class="btn primary-btn" style="white-space: nowrap;">🔓 Decrypt & Import</button>
+              </div>
+            </div>
+
             <button id="btnExecuteImport" class="btn primary-btn full-width" style="margin-top: 12px;">
               📥 Process & Import Configuration
             </button>
@@ -348,17 +358,38 @@
           <!-- Export Card -->
           <div class="form-card">
             <h3 class="card-title">Export Backup</h3>
-            <p class="field-desc">Download all your active profiles, custom fields, and configuration into a portable JSON file.</p>
+            <p class="field-desc">Download all your active profiles, custom fields, and configuration into a portable file.</p>
 
-            <div class="export-options advanced-only">
-              <label class="checkbox-label" style="margin-bottom: 16px;">
+            <!-- Dual-Mode Export Selection -->
+            <div class="field-group" style="margin-top: 14px;">
+              <label style="font-weight: 600; margin-bottom: 8px; display: block;">Export Format:</label>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <label class="radio-label">
+                  <input type="radio" name="exportFormatMode" value="encrypted" checked>
+                  <span>🔒 <strong>Encrypted Vault Backup (.json)</strong> — Protected by Master Password (AES-256-GCM). Safe for cloud drives and backups.</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="exportFormatMode" value="plaintext">
+                  <span>📄 <strong>Plaintext JSON (.json)</strong> — Standard unencrypted JSON for manual editing or scripting.</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Optional Custom Export Password (if vault is not enabled or user wants custom password) -->
+            <div id="exportCustomPassphraseGroup" class="field-group hidden" style="margin-top: 12px;">
+              <label for="exportCustomPassphrase">Encryption Passphrase / PIN:</label>
+              <input type="password" id="exportCustomPassphrase" class="text-input" placeholder="Enter password to encrypt this export...">
+            </div>
+
+            <div class="export-options advanced-only" style="margin-top: 14px;">
+              <label class="checkbox-label" style="margin-bottom: 8px;">
                 <input type="checkbox" id="exportIncludeApiKey"> Include API Keys in export
               </label>
-              <p class="field-desc text-warning">⚠️ Keep unchecked if you plan to share this JSON file with others!</p>
+              <p class="field-desc text-warning">⚠️ Keep unchecked if you plan to share this file with others!</p>
             </div>
 
             <button id="btnExecuteExport" class="btn secondary-btn full-width" style="margin-top: 16px;">
-              📤 Export All Profiles to JSON File
+              📤 Export Configuration
             </button>
           </div>
         </div>
@@ -602,9 +633,101 @@
         <div class="pane-header">
           <div>
             <h1 class="pane-title">Filling Preferences</h1>
-            <p class="pane-subtitle">Configure the hybrid engine and on-page visual feedback.</p>
+            <p class="pane-subtitle">Configure security, storage encryption, hybrid engine, and on-page visual feedback.</p>
           </div>
           <button id="btnSavePreferences" class="btn primary-btn">Save Preferences</button>
+        </div>
+
+        <!-- Master Password & Vault Encryption Card -->
+        <div class="form-card" id="vaultSecurityCard">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 class="card-title" style="margin-bottom: 0;">🛡️ Master Password & Storage Encryption</h3>
+            <span id="vaultStatusBadge" class="badge" style="font-size: 11px; padding: 4px 8px;">Loading...</span>
+          </div>
+          
+          <p class="field-desc">
+            Encrypt your stored profiles, business/personal details, and API keys with <strong>AES-256-GCM</strong>.
+            Uses a cryptographically random salt and 600,000 PBKDF2 iterations to protect even short PINs against dictionary attacks.
+          </p>
+
+          <!-- Status: Unencrypted -->
+          <div id="vaultUnencryptedBox" class="vault-box" style="margin-top: 14px;">
+            <p style="font-size: 13.5px; color: #94a3b8; margin-bottom: 12px;">
+              ⚠️ Storage is currently <strong>unencrypted</strong>. Anyone with access to your computer's files can read your profiles and keys.
+            </p>
+            <button type="button" id="btnShowVaultSetup" class="btn primary-btn">
+              🔐 Set Master PIN or Password
+            </button>
+          </div>
+
+          <!-- Status: Encrypted & Unlocked -->
+          <div id="vaultUnlockedBox" class="vault-box hidden" style="margin-top: 14px;">
+            <p style="font-size: 13.5px; color: #10b981; margin-bottom: 12px;">
+              🔓 Vault is <strong>Unlocked</strong> for this browser session. 0 bytes ever leave your device unencrypted.
+            </p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" id="btnLockVaultNow" class="btn secondary-btn">🔒 Lock Vault Now</button>
+              <button type="button" id="btnShowChangePassword" class="btn secondary-btn">🔑 Change Password / PIN</button>
+              <button type="button" id="btnShowDisableVault" class="btn danger-btn">🔓 Disable Encryption</button>
+            </div>
+          </div>
+
+          <!-- Status: Encrypted & Locked -->
+          <div id="vaultLockedBox" class="vault-box hidden" style="margin-top: 14px;">
+            <p style="font-size: 13.5px; color: #f59e0b; margin-bottom: 12px;">
+              🔒 Vault is currently <strong>Locked</strong>. Enter your Master PIN or Password to access profiles and fill forms.
+            </p>
+            <div style="display: flex; gap: 8px; max-width: 400px;">
+              <input type="password" id="vaultUnlockInput" class="text-input" placeholder="Enter PIN or Password...">
+              <button type="button" id="btnUnlockVaultNow" class="btn primary-btn" style="white-space: nowrap;">Unlock</button>
+            </div>
+            <div id="vaultUnlockError" class="field-desc text-danger hidden" style="margin-top: 6px;"></div>
+          </div>
+
+          <!-- Interactive Setup / Change Password Form Expander -->
+          <div id="vaultSetupForm" class="vault-form-container hidden" style="margin-top: 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
+            <h4 id="vaultSetupTitle" style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #f8fafc;">Setup Vault Encryption</h4>
+            
+            <div id="vaultCurrentPasswordGroup" class="field-group hidden" style="margin-bottom: 12px;">
+              <label for="vaultCurrentPassword">Current PIN / Password:</label>
+              <input type="password" id="vaultCurrentPassword" class="text-input" placeholder="Enter current password...">
+            </div>
+
+            <div class="field-group" style="margin-bottom: 12px;">
+              <label for="vaultNewPassword">Master PIN or Password (1 to 64+ characters):</label>
+              <input type="password" id="vaultNewPassword" class="text-input" placeholder="e.g. 1234 or a strong passphrase...">
+              <div id="vaultStrengthIndicator" class="strength-indicator" style="margin-top: 6px; font-size: 12px; color: #94a3b8;">
+                Tip: You can use a convenient 4-digit PIN for personal laptops, or a strong passphrase for shared computers.
+              </div>
+            </div>
+
+            <div class="field-group" style="margin-bottom: 14px;">
+              <label for="vaultConfirmPassword">Confirm PIN or Password:</label>
+              <input type="password" id="vaultConfirmPassword" class="text-input" placeholder="Re-enter to confirm...">
+            </div>
+
+            <div id="vaultSetupError" class="field-desc text-danger hidden" style="margin-bottom: 10px;"></div>
+
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btnConfirmVaultSetup" class="btn primary-btn">Save & Encrypt</button>
+              <button type="button" id="btnCancelVaultSetup" class="btn secondary-btn">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Disable Encryption Confirmation Form -->
+          <div id="vaultDisableForm" class="vault-form-container hidden" style="margin-top: 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid #dc2626; border-radius: 8px; padding: 16px;">
+            <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #f87171;">Disable Storage Encryption?</h4>
+            <p class="field-desc" style="margin-bottom: 12px;">Your profiles and API keys will be decrypted and stored in standard plaintext on this machine.</p>
+            <div class="field-group" style="margin-bottom: 12px;">
+              <label for="vaultDisablePassword">Confirm Master PIN / Password:</label>
+              <input type="password" id="vaultDisablePassword" class="text-input" placeholder="Enter password to confirm...">
+            </div>
+            <div id="vaultDisableError" class="field-desc text-danger hidden" style="margin-bottom: 10px;"></div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btnConfirmDisableVault" class="btn danger-btn">Decrypt & Disable</button>
+              <button type="button" id="btnCancelDisableVault" class="btn secondary-btn">Cancel</button>
+            </div>
+          </div>
         </div>
 
         <div class="form-card">

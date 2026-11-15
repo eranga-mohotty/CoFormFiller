@@ -17,10 +17,18 @@ import {
   saveSettings,
   getFillLogs,
   clearFillLogs,
-  generateEmptyProfileTemplate
+  generateEmptyProfileTemplate,
+  isVaultEncrypted,
+  isVaultLocked,
+  unlockVault,
+  lockVault,
+  setupVaultEncryption,
+  disableVaultEncryption,
+  changeVaultPassphrase
 } from '../services/storage.js';
 
 import { importConfiguration, exportConfiguration } from '../utils/importer.js';
+import { evaluatePassphraseStrength } from '../services/crypto.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Navigation Tabs
@@ -489,8 +497,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   const importTextarea = document.getElementById('importTextarea');
   const btnExecuteImport = document.getElementById('btnExecuteImport');
   const importStatusBox = document.getElementById('importStatusBox');
+  const importPasswordPrompt = document.getElementById('importPasswordPrompt');
+  const importPassphraseInput = document.getElementById('importPassphraseInput');
+  const btnDecryptImport = document.getElementById('btnDecryptImport');
   const exportIncludeApiKey = document.getElementById('exportIncludeApiKey');
+  const exportCustomPassphrase = document.getElementById('exportCustomPassphrase');
+  const exportCustomPassphraseGroup = document.getElementById('exportCustomPassphraseGroup');
   const btnExecuteExport = document.getElementById('btnExecuteExport');
+
+  // Radio listener for export format (toggle passphrase field)
+  document.querySelectorAll('input[name="exportFormatMode"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      if (radio.value === 'encrypted' && exportCustomPassphraseGroup) {
+        exportCustomPassphraseGroup.classList.remove('hidden');
+      } else if (exportCustomPassphraseGroup) {
+        exportCustomPassphraseGroup.classList.add('hidden');
+      }
+    });
+  });
 
   dropZone.addEventListener('click', () => fileUploadInput.click());
   dropZone.addEventListener('dragover', (e) => {
@@ -516,26 +540,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       importTextarea.value = e.target.result;
-      showToast(`File "${file.name}" loaded into textarea.`);
+      if (importPasswordPrompt) importPasswordPrompt.classList.add('hidden');
+      showToast(`File "${file.name}" loaded.`);
     };
     reader.readAsText(file);
   }
 
-  btnExecuteImport.addEventListener('click', async () => {
+  async function processImport(passphrase = '') {
     const text = importTextarea.value.trim();
     if (!text) {
       alert('Please paste JSON or upload a file first.');
       return;
     }
 
-    const mode = document.querySelector('input[name="importMode"]:checked').value;
+    const mode = document.querySelector('input[name="importMode"]:checked')?.value || 'replace';
     importStatusBox.className = 'status-box';
     importStatusBox.textContent = 'Processing configuration...';
     importStatusBox.classList.remove('hidden');
 
     try {
-      const res = await importConfiguration(text, mode);
+      const res = await importConfiguration(text, mode, { passphrase });
+      if (res.needsPassword) {
+        if (importPasswordPrompt) {
+          importPasswordPrompt.classList.remove('hidden');
+          importPassphraseInput?.focus();
+        }
+        importStatusBox.className = 'status-box error';
+        importStatusBox.textContent = res.message;
+        return;
+      }
+
       if (res.success) {
+        if (importPasswordPrompt) importPasswordPrompt.classList.add('hidden');
         importStatusBox.className = 'status-box success';
         importStatusBox.innerHTML = `
           <strong>Import Successful!</strong><br>
@@ -555,23 +591,53 @@ document.addEventListener('DOMContentLoaded', async () => {
       importStatusBox.className = 'status-box error';
       importStatusBox.textContent = 'Import error: ' + err.message;
     }
+  }
+
+  btnExecuteImport.addEventListener('click', () => processImport(''));
+  btnDecryptImport?.addEventListener('click', () => {
+    const pass = importPassphraseInput ? importPassphraseInput.value : '';
+    processImport(pass);
   });
 
   btnExecuteExport.addEventListener('click', async () => {
-    const includeKey = exportIncludeApiKey.checked;
-    const config = await exportConfiguration({ includeApiKey: includeKey });
-    const jsonStr = JSON.stringify(config, null, 2);
+    const includeKey = exportIncludeApiKey ? exportIncludeApiKey.checked : false;
+    const formatMode = document.querySelector('input[name="exportFormatMode"]:checked')?.value || 'encrypted';
+    const isEncrypted = formatMode === 'encrypted';
 
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `smartform_ai_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    showToast('Export downloaded successfully!');
+    let passphrase = '';
+    if (isEncrypted) {
+      passphrase = exportCustomPassphrase ? exportCustomPassphrase.value.trim() : '';
+      if (!passphrase) {
+        passphrase = prompt('Enter a Master PIN or Password to encrypt this backup:');
+        if (!passphrase) {
+          showToast('Export cancelled (password required for encrypted backup).', true);
+          return;
+        }
+      }
+    }
+
+    try {
+      const config = await exportConfiguration({
+        includeApiKey: includeKey,
+        encrypt: isEncrypted,
+        passphrase
+      });
+      const jsonStr = JSON.stringify(config, null, 2);
+
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const prefix = isEncrypted ? 'smartform_encrypted_vault' : 'smartform_ai_backup';
+      a.download = `${prefix}_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast(`Export downloaded (${isEncrypted ? 'Encrypted Vault' : 'Plaintext JSON'})!`);
+    } catch (err) {
+      showToast('Export failed: ' + err.message, true);
+    }
   });
 
   // --- INTERFACE MODE: SIMPLE VS ADVANCED ---
@@ -975,6 +1041,266 @@ document.addEventListener('DOMContentLoaded', async () => {
   const prefHighlightDuration = document.getElementById('prefHighlightDuration');
   const btnSavePreferences = document.getElementById('btnSavePreferences');
 
+  // --- VAULT ENCRYPTION & SECURITY CONTROLLER ---
+  const vaultStatusBadge = document.getElementById('vaultStatusBadge');
+  const vaultUnencryptedBox = document.getElementById('vaultUnencryptedBox');
+  const vaultUnlockedBox = document.getElementById('vaultUnlockedBox');
+  const vaultLockedBox = document.getElementById('vaultLockedBox');
+  const btnShowVaultSetup = document.getElementById('btnShowVaultSetup');
+  const btnLockVaultNow = document.getElementById('btnLockVaultNow');
+  const btnShowChangePassword = document.getElementById('btnShowChangePassword');
+  const btnShowDisableVault = document.getElementById('btnShowDisableVault');
+  const vaultUnlockInput = document.getElementById('vaultUnlockInput');
+  const btnUnlockVaultNow = document.getElementById('btnUnlockVaultNow');
+  const vaultUnlockError = document.getElementById('vaultUnlockError');
+
+  const vaultSetupForm = document.getElementById('vaultSetupForm');
+  const vaultSetupTitle = document.getElementById('vaultSetupTitle');
+  const vaultCurrentPasswordGroup = document.getElementById('vaultCurrentPasswordGroup');
+  const vaultCurrentPassword = document.getElementById('vaultCurrentPassword');
+  const vaultNewPassword = document.getElementById('vaultNewPassword');
+  const vaultConfirmPassword = document.getElementById('vaultConfirmPassword');
+  const vaultStrengthIndicator = document.getElementById('vaultStrengthIndicator');
+  const vaultSetupError = document.getElementById('vaultSetupError');
+  const btnConfirmVaultSetup = document.getElementById('btnConfirmVaultSetup');
+  const btnCancelVaultSetup = document.getElementById('btnCancelVaultSetup');
+
+  const vaultDisableForm = document.getElementById('vaultDisableForm');
+  const vaultDisablePassword = document.getElementById('vaultDisablePassword');
+  const vaultDisableError = document.getElementById('vaultDisableError');
+  const btnConfirmDisableVault = document.getElementById('btnConfirmDisableVault');
+  const btnCancelDisableVault = document.getElementById('btnCancelDisableVault');
+
+  let isChangingPassword = false;
+
+  async function renderVaultStatus() {
+    const isEncrypted = await isVaultEncrypted();
+    const isLocked = await isVaultLocked();
+
+    if (!isEncrypted) {
+      if (vaultStatusBadge) {
+        vaultStatusBadge.className = 'badge';
+        vaultStatusBadge.style.background = '#eab308';
+        vaultStatusBadge.style.color = '#000000';
+        vaultStatusBadge.textContent = '⚠️ Unencrypted';
+      }
+      vaultUnencryptedBox?.classList.remove('hidden');
+      vaultUnlockedBox?.classList.add('hidden');
+      vaultLockedBox?.classList.add('hidden');
+    } else if (isLocked) {
+      if (vaultStatusBadge) {
+        vaultStatusBadge.className = 'badge';
+        vaultStatusBadge.style.background = '#ef4444';
+        vaultStatusBadge.style.color = '#ffffff';
+        vaultStatusBadge.textContent = '🔒 Locked';
+      }
+      vaultUnencryptedBox?.classList.add('hidden');
+      vaultUnlockedBox?.classList.add('hidden');
+      vaultLockedBox?.classList.remove('hidden');
+    } else {
+      if (vaultStatusBadge) {
+        vaultStatusBadge.className = 'badge';
+        vaultStatusBadge.style.background = '#10b981';
+        vaultStatusBadge.style.color = '#ffffff';
+        vaultStatusBadge.textContent = '🔓 Unlocked (AES-256-GCM)';
+      }
+      vaultUnencryptedBox?.classList.add('hidden');
+      vaultUnlockedBox?.classList.remove('hidden');
+      vaultLockedBox?.classList.add('hidden');
+    }
+
+    vaultSetupForm?.classList.add('hidden');
+    vaultDisableForm?.classList.add('hidden');
+  }
+
+  // Password strength dynamic evaluation
+  vaultNewPassword?.addEventListener('input', () => {
+    const val = vaultNewPassword.value;
+    const strength = evaluatePassphraseStrength(val);
+    if (!val) {
+      if (vaultStrengthIndicator) {
+        vaultStrengthIndicator.textContent = 'Tip: You can use a convenient 4-digit PIN for personal laptops, or a strong passphrase for shared computers.';
+        vaultStrengthIndicator.style.color = '#94a3b8';
+      }
+    } else if (strength.level === 'pin') {
+      if (vaultStrengthIndicator) {
+        vaultStrengthIndicator.textContent = '⚡ Fast PIN (Convenient for personal devices — protected by salt & 600,000 PBKDF2 iterations)';
+        vaultStrengthIndicator.style.color = '#38bdf8';
+      }
+    } else if (strength.level === 'good') {
+      if (vaultStrengthIndicator) {
+        vaultStrengthIndicator.textContent = '🛡️ Standard Password (Balanced protection)';
+        vaultStrengthIndicator.style.color = '#a3e635';
+      }
+    } else {
+      if (vaultStrengthIndicator) {
+        vaultStrengthIndicator.textContent = '🏰 Strong High-Entropy Passphrase (Maximum defense)';
+        vaultStrengthIndicator.style.color = '#4ade80';
+      }
+    }
+  });
+
+  btnShowVaultSetup?.addEventListener('click', () => {
+    isChangingPassword = false;
+    if (vaultSetupTitle) vaultSetupTitle.textContent = 'Setup Vault Encryption';
+    vaultCurrentPasswordGroup?.classList.add('hidden');
+    if (vaultNewPassword) vaultNewPassword.value = '';
+    if (vaultConfirmPassword) vaultConfirmPassword.value = '';
+    vaultSetupError?.classList.add('hidden');
+    vaultSetupForm?.classList.remove('hidden');
+    vaultNewPassword?.focus();
+  });
+
+  btnShowChangePassword?.addEventListener('click', () => {
+    isChangingPassword = true;
+    if (vaultSetupTitle) vaultSetupTitle.textContent = 'Change Master Password / PIN';
+    vaultCurrentPasswordGroup?.classList.remove('hidden');
+    if (vaultCurrentPassword) vaultCurrentPassword.value = '';
+    if (vaultNewPassword) vaultNewPassword.value = '';
+    if (vaultConfirmPassword) vaultConfirmPassword.value = '';
+    vaultSetupError?.classList.add('hidden');
+    vaultSetupForm?.classList.remove('hidden');
+    vaultCurrentPassword?.focus();
+  });
+
+  btnCancelVaultSetup?.addEventListener('click', () => {
+    vaultSetupForm?.classList.add('hidden');
+  });
+
+  btnConfirmVaultSetup?.addEventListener('click', async () => {
+    const newPass = vaultNewPassword ? vaultNewPassword.value : '';
+    const confirmPass = vaultConfirmPassword ? vaultConfirmPassword.value : '';
+
+    if (!newPass) {
+      if (vaultSetupError) {
+        vaultSetupError.textContent = 'Please enter a PIN or Password.';
+        vaultSetupError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      if (vaultSetupError) {
+        vaultSetupError.textContent = 'Passwords do not match. Please re-enter.';
+        vaultSetupError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    btnConfirmVaultSetup.disabled = true;
+    btnConfirmVaultSetup.textContent = 'Encrypting...';
+
+    try {
+      if (isChangingPassword) {
+        const curPass = vaultCurrentPassword ? vaultCurrentPassword.value : '';
+        await changeVaultPassphrase(curPass, newPass);
+        showToast('Master Password successfully changed!');
+      } else {
+        await setupVaultEncryption(newPass);
+        showToast('Vault Encryption successfully enabled!');
+      }
+      await renderVaultStatus();
+      await loadProfilesList();
+      await loadAiSettings();
+    } catch (err) {
+      if (vaultSetupError) {
+        vaultSetupError.textContent = err.message;
+        vaultSetupError.classList.remove('hidden');
+      }
+    } finally {
+      btnConfirmVaultSetup.disabled = false;
+      btnConfirmVaultSetup.textContent = 'Save & Encrypt';
+    }
+  });
+
+  btnLockVaultNow?.addEventListener('click', async () => {
+    await lockVault();
+    await renderVaultStatus();
+    await loadProfilesList();
+    showToast('Vault locked.');
+  });
+
+  btnUnlockVaultNow?.addEventListener('click', async () => {
+    const pass = vaultUnlockInput ? vaultUnlockInput.value : '';
+    if (!pass) {
+      if (vaultUnlockError) {
+        vaultUnlockError.textContent = 'Please enter your Master PIN or Password.';
+        vaultUnlockError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    btnUnlockVaultNow.disabled = true;
+    btnUnlockVaultNow.textContent = 'Verifying...';
+
+    const res = await unlockVault(pass);
+    btnUnlockVaultNow.disabled = false;
+    btnUnlockVaultNow.textContent = 'Unlock';
+
+    if (res.success) {
+      vaultUnlockInput.value = '';
+      vaultUnlockError?.classList.add('hidden');
+      await renderVaultStatus();
+      await loadProfilesList();
+      await loadAiSettings();
+      showToast('Vault unlocked successfully!');
+    } else {
+      if (vaultUnlockError) {
+        vaultUnlockError.textContent = res.error || 'Incorrect PIN or Password.';
+        vaultUnlockError.classList.remove('hidden');
+      }
+    }
+  });
+
+  vaultUnlockInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      btnUnlockVaultNow?.click();
+    }
+  });
+
+  btnShowDisableVault?.addEventListener('click', () => {
+    if (vaultDisablePassword) vaultDisablePassword.value = '';
+    vaultDisableError?.classList.add('hidden');
+    vaultDisableForm?.classList.remove('hidden');
+    vaultDisablePassword?.focus();
+  });
+
+  btnCancelDisableVault?.addEventListener('click', () => {
+    vaultDisableForm?.classList.add('hidden');
+  });
+
+  btnConfirmDisableVault?.addEventListener('click', async () => {
+    const pass = vaultDisablePassword ? vaultDisablePassword.value : '';
+    if (!pass) {
+      if (vaultDisableError) {
+        vaultDisableError.textContent = 'Please enter your password to confirm.';
+        vaultDisableError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    btnConfirmDisableVault.disabled = true;
+    btnConfirmDisableVault.textContent = 'Decrypting...';
+
+    try {
+      const res = await disableVaultEncryption(pass);
+      if (res.success) {
+        showToast('Storage encryption disabled. Data restored to standard storage.');
+        await renderVaultStatus();
+        await loadProfilesList();
+        await loadAiSettings();
+      }
+    } catch (err) {
+      if (vaultDisableError) {
+        vaultDisableError.textContent = err.message;
+        vaultDisableError.classList.remove('hidden');
+      }
+    } finally {
+      btnConfirmDisableVault.disabled = false;
+      btnConfirmDisableVault.textContent = 'Decrypt & Disable';
+    }
+  });
+
   async function loadPreferences() {
     const s = await getSettings();
     prefTier1Enabled.checked = s.tier1Enabled !== false;
@@ -1065,6 +1391,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Initial Load
+  await renderVaultStatus();
   await loadProfilesList();
   await loadAiSettings();
   await loadPreferences();

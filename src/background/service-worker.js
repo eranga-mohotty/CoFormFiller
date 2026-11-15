@@ -9,7 +9,15 @@ import {
   getProfiles,
   setActiveProfileId,
   recordFillLog,
-  saveLearnedFieldToActiveProfile
+  saveLearnedFieldToActiveProfile,
+  isVaultEncrypted,
+  isVaultLocked,
+  unlockVault,
+  lockVault,
+  setupVaultEncryption,
+  disableVaultEncryption,
+  changeVaultPassphrase,
+  getVaultMeta
 } from '../services/storage.js';
 import { callAiProvider, buildPromptPayload, testAiConnection } from '../engine/ai-agent.js';
 
@@ -19,7 +27,14 @@ const MSG = {
   RUN_AI_FILL: 'SMARTFORM_RUN_AI_FILL',
   TEST_KEY: 'SMARTFORM_TEST_KEY',
   SWITCH_PROFILE: 'SMARTFORM_SWITCH_PROFILE',
-  LEARN_FIELD: 'SMARTFORM_LEARN_FIELD'
+  LEARN_FIELD: 'SMARTFORM_LEARN_FIELD',
+  // Vault & Security
+  VAULT_STATUS: 'SMARTFORM_VAULT_STATUS',
+  VAULT_UNLOCK: 'SMARTFORM_VAULT_UNLOCK',
+  VAULT_LOCK: 'SMARTFORM_VAULT_LOCK',
+  VAULT_SETUP: 'SMARTFORM_VAULT_SETUP',
+  VAULT_DISABLE: 'SMARTFORM_VAULT_DISABLE',
+  VAULT_CHANGE_PASSWORD: 'SMARTFORM_VAULT_CHANGE_PASSWORD'
 };
 
 chrome.runtime.onInstalled.addListener(async (details) => {
@@ -34,10 +49,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       switch (message.type) {
         case MSG.GET_STATUS: {
-          const [settings, activeProfile, profiles] = await Promise.all([
+          const [settings, activeProfile, profiles, isEncrypted, isLocked] = await Promise.all([
             getSettings(),
             getActiveProfile(),
-            getProfiles()
+            getProfiles(),
+            isVaultEncrypted(),
+            isVaultLocked()
           ]);
 
           const provider = settings.aiProvider || 'gemini';
@@ -66,6 +83,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             success: true,
             hasApiKey,
             isBlacklisted,
+            isEncrypted,
+            isLocked,
             provider,
             model: provider === 'openai-compatible'
               ? settings.openaiModel
@@ -121,6 +140,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         case MSG.RUN_AI_FILL: {
+          const locked = await isVaultLocked();
+          if (locked) {
+            throw new Error('SmartForm AI Vault is locked. Please enter your Master Password/PIN to unlock.');
+          }
+
           const { fields, url, domain } = message;
           const [settings, activeProfile] = await Promise.all([
             getSettings(),
@@ -178,6 +202,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             fills: formattedFills,
             durationMs: aiResult.durationMs
           };
+        }
+
+        case MSG.VAULT_STATUS: {
+          const [isEncrypted, isLocked, meta] = await Promise.all([
+            isVaultEncrypted(),
+            isVaultLocked(),
+            getVaultMeta()
+          ]);
+          return {
+            success: true,
+            isEncrypted,
+            isLocked,
+            autoLockMinutes: meta ? meta.autoLockMinutes : 0
+          };
+        }
+
+        case MSG.VAULT_UNLOCK: {
+          const res = await unlockVault(message.passphrase);
+          return res;
+        }
+
+        case MSG.VAULT_LOCK: {
+          const res = await lockVault();
+          return res;
+        }
+
+        case MSG.VAULT_SETUP: {
+          const res = await setupVaultEncryption(message.passphrase, message.options);
+          return res;
+        }
+
+        case MSG.VAULT_DISABLE: {
+          const res = await disableVaultEncryption(message.passphrase);
+          return res;
+        }
+
+        case MSG.VAULT_CHANGE_PASSWORD: {
+          const res = await changeVaultPassphrase(message.currentPassphrase, message.newPassphrase);
+          return res;
         }
 
         default:

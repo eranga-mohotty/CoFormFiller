@@ -140,6 +140,93 @@
     }, 20000);
   }
 
+  // On-page Vault Unlock Prompt
+  let unlockPromptEl = null;
+
+  function showVaultUnlockPrompt(onUnlocked) {
+    if (unlockPromptEl) unlockPromptEl.remove();
+
+    unlockPromptEl = document.createElement('div');
+    unlockPromptEl.id = 'smartform-unlock-modal';
+    unlockPromptEl.innerHTML = `
+      <div class="smartform-unlock-card">
+        <div class="smartform-unlock-header">
+          <span class="smartform-unlock-title">🔒 SmartForm AI Vault is Locked</span>
+          <button class="smartform-unlock-close" title="Cancel">&times;</button>
+        </div>
+        <p class="smartform-unlock-desc">Enter your Master PIN or Password to unlock your knowledge profile and fill this form:</p>
+        <div class="smartform-unlock-body">
+          <input type="password" class="smartform-unlock-input" placeholder="PIN or Password" autofocus>
+          <div class="smartform-unlock-error hidden"></div>
+        </div>
+        <div class="smartform-unlock-actions">
+          <button class="smartform-unlock-cancel-btn">Cancel</button>
+          <button class="smartform-unlock-submit-btn">Unlock & Fill</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(unlockPromptEl);
+
+    const input = unlockPromptEl.querySelector('.smartform-unlock-input');
+    const errorEl = unlockPromptEl.querySelector('.smartform-unlock-error');
+    const btnSubmit = unlockPromptEl.querySelector('.smartform-unlock-submit-btn');
+    const btnCancel = unlockPromptEl.querySelector('.smartform-unlock-cancel-btn');
+    const btnClose = unlockPromptEl.querySelector('.smartform-unlock-close');
+
+    setTimeout(() => input?.focus(), 50);
+
+    const handleClose = () => {
+      unlockPromptEl.remove();
+      unlockPromptEl = null;
+      showToast('Form fill cancelled (vault locked)', 'info', 2500);
+    };
+
+    const handleUnlock = async () => {
+      const pin = input ? input.value : '';
+      if (!pin) {
+        errorEl.textContent = 'Please enter PIN or password.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Verifying...';
+
+      try {
+        const res = await chrome.runtime.sendMessage({
+          type: 'SMARTFORM_VAULT_UNLOCK',
+          passphrase: pin
+        });
+
+        if (res && res.success) {
+          unlockPromptEl.remove();
+          unlockPromptEl = null;
+          showToast('🔓 Vault Unlocked!', 'success', 2000);
+          if (onUnlocked) onUnlocked();
+        } else {
+          errorEl.textContent = res?.error || 'Incorrect PIN or password.';
+          errorEl.classList.remove('hidden');
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = 'Unlock & Fill';
+        }
+      } catch (err) {
+        errorEl.textContent = 'Error: ' + err.message;
+        errorEl.classList.remove('hidden');
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Unlock & Fill';
+      }
+    };
+
+    btnSubmit.addEventListener('click', handleUnlock);
+    btnCancel.addEventListener('click', handleClose);
+    btnClose.addEventListener('click', handleClose);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleUnlock();
+      if (e.key === 'Escape') handleClose();
+    });
+  }
+
   // Smart Learning Mode listener: watches fields unfilled by AI and offers to learn them when user fills them
   function setupLearningMode(scannedFields) {
     if (!scannedFields || !scannedFields.length) return;
@@ -267,6 +354,17 @@
     try {
       // 1. Refresh latest status & profile from background
       extensionStatus = await chrome.runtime.sendMessage({ type: 'SMARTFORM_GET_STATUS' });
+
+      // Vault Lock Guard
+      if (extensionStatus && extensionStatus.isEncrypted && extensionStatus.isLocked) {
+        if (btn) {
+          btn.classList.remove('loading');
+          btn.innerHTML = originalBtnHtml;
+        }
+        isFilling = false;
+        showVaultUnlockPrompt(() => runAutoFillPipeline());
+        return;
+      }
 
       if (!extensionStatus.activeProfile) {
         showToast('⚠️ No active profile selected. Please open SmartForm Settings.', 'error', 4000);
