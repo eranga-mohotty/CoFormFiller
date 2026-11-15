@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Australian Business Directory - Register Your Business</title>
+  <link rel="stylesheet" href="../src/content/content.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      padding: 40px 20px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 840px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 36px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    h1 { font-size: 24px; color: #0f172a; margin-bottom: 6px; }
+    p.lead { color: #64748b; font-size: 14px; margin-bottom: 28px; }
+    fieldset {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    legend {
+      font-size: 14px;
+      font-weight: 700;
+      color: #334155;
+      padding: 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .form-group:last-child { margin-bottom: 0; }
+    label { font-size: 13px; font-weight: 600; color: #334155; }
+    input[type="text"], input[type="email"], input[type="tel"], input[type="url"], select, textarea {
+      padding: 9px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #0f172a;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #2563eb; }
+    .hours-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .day-name { width: 90px; font-weight: 600; font-size: 13px; color: #475569; }
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      cursor: pointer;
+    }
+    .btn-submit {
+      background: #2563eb;
+      color: #ffffff;
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-submit:hover { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Australian Commercial Directory Registration</h1>
+    <p class="lead">Register your business profile to get listed in Perth and across Western Australia.</p>
+
+    <form id="directoryForm" onsubmit="event.preventDefault(); alert('Form submitted!');">
+      <!-- Section 1: Business Identity -->
+      <fieldset>
+        <legend>Business Identity</legend>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="company_name">Company / Business Name *</label>
+            <input type="text" id="company_name" name="company_name" placeholder="e.g. Acme Services" required>
+          </div>
+          <div class="form-group">
+            <label for="trading_name">Trading Name (if different)</label>
+            <input type="text" id="trading_name" name="trading_name" placeholder="e.g. Acme Group WA">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="company_website">Official Website URL</label>
+            <input type="url" id="company_website" name="company_website" placeholder="https://example.com.au">
+          </div>
+          <div class="form-group">
+            <label for="abn">Australian Business Number (ABN)</label>
+            <input type="text" id="abn" name="abn" placeholder="XX XXX XXX XXX">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Section 2: Contact Information -->
+      <fieldset>
+        <legend>Contact Information</legend>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="contact_name">Primary Contact Person</label>
+            <input type="text" id="contact_name" name="contact_name" placeholder="John Smith">
+          </div>
+          <div class="form-group">
+            <label for="contact_email">Business Email Address *</label>
+            <input type="email" id="contact_email" name="contact_email" placeholder="contact@example.com.au" required>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="contact_phone">Business Phone Number</label>
+            <input type="tel" id="contact_phone" name="contact_phone" placeholder="+61 ...">
+          </div>
+          <div class="form-group">
+            <label for="contact_mobile">Mobile Number</label>
+            <input type="tel" id="contact_mobile" name="contact_mobile" placeholder="+61 4...">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Section 3: Physical Address -->
+      <fieldset>
+        <legend>Physical Address</legend>
+        <div class="form-group">
+          <label for="street_address">Street Address</label>
+          <input type="text" id="street_address" name="street_address" placeholder="123 Example St">
+        </div>
+        <div class="grid-3">
+          <div class="form-group">
+            <label for="suburb">City / Suburb</label>
+            <input type="text" id="suburb" name="suburb" placeholder="Subiaco">
+          </div>
+          <div class="form-group">
+            <label for="state_select">State / Territory</label>
+            <select id="state_select" name="state_select">
+              <option value="">Select State</option>
+              <option value="NSW">New South Wales (NSW)</option>
+              <option value="VIC">Victoria (VIC)</option>
+              <option value="QLD">Queensland (QLD)</option>
+              <option value="WA">Western Australia (WA)</option>
+              <option value="SA">South Australia (SA)</option>
+              <option value="TAS">Tasmania (TAS)</option>
+              <option value="ACT">Australian Capital Territory (ACT)</option>
+              <option value="NT">Northern Territory (NT)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="postal_code">Postcode</label>
+            <input type="text" id="postal_code" name="postal_code" placeholder="6000">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Section 4: Operating Hours -->
+      <fieldset>
+        <legend>Trading / Operating Hours</legend>
+        <div class="hours-row">
+          <span class="day-name">Monday</span>
+          <select name="mon_open" id="mon_open">
+            <option value="">Open Time</option>
+            <option value="06:00">6:00 AM</option>
+            <option value="07:00">7:00 AM</option>
+            <option value="08:00">8:00 AM</option>
+            <option value="09:00">9:00 AM</option>
+          </select>
+          <span>to</span>
+          <select name="mon_close" id="mon_close">
+            <option value="">Close Time</option>
+            <option value="17:00">5:00 PM</option>
+            <option value="18:00">6:00 PM</option>
+            <option value="19:00">7:00 PM</option>
+            <option value="20:00">8:00 PM</option>
+          </select>
+        </div>
+        <div class="hours-row">
+          <span class="day-name">Friday</span>
+          <select name="fri_open" id="fri_open">
+            <option value="">Open Time</option>
+            <option value="06:00">6:00 AM</option>
+            <option value="07:00">7:00 AM</option>
+            <option value="08:00">8:00 AM</option>
+          </select>
+          <span>to</span>
+          <select name="fri_close" id="fri_close">
+            <option value="">Close Time</option>
+            <option value="17:00">5:00 PM</option>
+            <option value="18:00">6:00 PM</option>
+            <option value="19:00">7:00 PM</option>
+          </select>
+        </div>
+        <div class="hours-row">
+          <span class="day-name">Saturday</span>
+          <select name="sat_open" id="sat_open">
+            <option value="">Open Time</option>
+            <option value="07:00">7:00 AM</option>
+            <option value="08:00">8:00 AM</option>
+            <option value="09:00">9:00 AM</option>
+          </select>
+          <span>to</span>
+          <select name="sat_close" id="sat_close">
+            <option value="">Close Time</option>
+            <option value="14:00">2:00 PM</option>
+            <option value="16:00">4:00 PM</option>
+            <option value="18:00">6:00 PM</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label class="checkbox-item">
+            <input type="checkbox" id="support_24_7" name="support_24_7"> We offer 24/7 or on-call emergency facility support
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Section 5: Services Provided (Multi-Checkbox Matching) -->
+      <fieldset>
+        <legend>Services Provided (Select all that apply)</legend>
+        <div class="checkbox-grid">
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="office_cleaning"> Office & Workplace Cleaning
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="medical_cleaning"> Medical & Healthcare Centre Cleaning
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="carpet_cleaning"> Commercial Carpet Cleaning
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="warehouse_cleaning"> Warehouse & Industrial Depot Cleaning
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="gym_cleaning"> Gym & Fitness Centre Cleaning
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="strata_cleaning"> Strata & Common Area Cleaning
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="window_cleaning"> Commercial Window Cleaning
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="childcare_cleaning"> Childcare Facility Cleaning
+          </label>
+          <!-- Negative test items that should NOT be checked for a cleaning business -->
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="pet_grooming"> Pet Grooming & Washing
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="services" value="solar_installation"> Solar Panel Installation
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Section 6: Business Descriptions -->
+      <fieldset>
+        <legend>Business Description</legend>
+        <div class="form-group">
+          <label for="short_summary">Short Summary / Tagline (Max 120 Characters)</label>
+          <input type="text" id="short_summary" name="short_summary" maxlength="120" placeholder="Brief elevator pitch...">
+        </div>
+        <div class="form-group">
+          <label for="business_description">Detailed Business Overview & Scope</label>
+          <textarea id="business_description" name="business_description" rows="5" placeholder="Describe your commercial capabilities, service areas, and tailored packages..."></textarea>
+        </div>
+      </fieldset>
+
+      <!-- Section 7: Bespoke Question / FAQ -->
+      <fieldset>
+        <legend>Custom Inquiry</legend>
+        <div class="form-group">
+          <label for="custom_faq">What commercial cleaning services do you provide in Perth?</label>
+          <textarea id="custom_faq" name="custom_faq" rows="3" placeholder="Provide details on your scope in metropolitan Perth..."></textarea>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="btn-submit">Submit Registration</button>
+    </form>
+  </div>
+  <script type="module" src="../src/content/content.js"></script>
+</body>
+</html>

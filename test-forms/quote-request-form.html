@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commercial Cleaning Supplier Tender Request</title>
+  <link rel="stylesheet" href="../src/content/content.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 40px 20px;
+    }
+    .card {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    h2 { margin-bottom: 20px; color: #1e293b; }
+    .form-group { margin-bottom: 18px; }
+    label.title { display: block; font-weight: 600; margin-bottom: 8px; font-size: 13.5px; }
+    input[type="text"], input[type="email"], input[type="tel"], textarea, select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .radio-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      cursor: pointer;
+    }
+    .btn {
+      background: #059669;
+      color: white;
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Supplier Tender - Contractor Registration</h2>
+    <form onsubmit="event.preventDefault(); alert('Tender submitted!');">
+      <div class="form-group">
+        <label class="title" for="tender_company">Company Name</label>
+        <input type="text" id="tender_company" name="tender_company">
+      </div>
+
+      <div class="form-group">
+        <label class="title" for="tender_email">Work Email</label>
+        <input type="email" id="tender_email" name="tender_email">
+      </div>
+
+      <div class="form-group">
+        <label class="title" for="tender_phone">Direct Phone</label>
+        <input type="tel" id="tender_phone" name="tender_phone">
+      </div>
+
+      <div class="form-group">
+        <label class="title">Primary Contractor Specialization (Radio)</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="contractor_specialization" value="commercial_cleaning"> Commercial, Office & Industrial Cleaning
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="contractor_specialization" value="plumbing"> Commercial Plumbing & Drainage
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="contractor_specialization" value="electrical"> Electrical & Lighting Maintenance
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="contractor_specialization" value="security"> Physical Security & Access Control
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="title" for="rate_structure">How do commercial cleaning rates work for your business?</label>
+        <textarea id="rate_structure" name="rate_structure" rows="3" placeholder="Explain your pricing structure..."></textarea>
+      </div>
+
+      <button type="submit" class="btn">Register as Supplier</button>
+    </form>
+  </div>
+  <script type="module" src="../src/content/content.js"></script>
+</body>
+</html>

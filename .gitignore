@@ -1,0 +1,17 @@
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+
+# Logs & Environment
+*.log
+npm-debug.log*
+.env
+.env.*
+
+# Temporary / Scratch
+*.tmp
+*.swp
+*.bak

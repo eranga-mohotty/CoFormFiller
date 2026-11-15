@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartForm AI - Settings & Profiles</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img src="../icons/icon48.png" alt="Logo" class="brand-logo">
+        <div>
+          <h2 class="brand-name">SmartForm AI</h2>
+          <span class="brand-sub">Knowledge & Settings</span>
+        </div>
+      </div>
+
+      <!-- Interface Mode Switcher -->
+      <div class="interface-mode-box">
+        <div class="interface-mode-toggle">
+          <button type="button" id="btnModeSimple" class="mode-pill-btn active" title="Streamlined mode for everyday use">
+            ⚡ Simple
+          </button>
+          <button type="button" id="btnModeAdvanced" class="mode-pill-btn" title="Unlock local models, timeouts, prompt tuning, and developer tools">
+            🛠️ Advanced
+          </button>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-profiles">
+          <span class="nav-icon">👤</span> Profiles Manager
+        </button>
+        <button class="nav-item" data-tab="tab-import-export">
+          <span class="nav-icon">🔄</span> Import & Export
+        </button>
+        <button class="nav-item" data-tab="tab-ai">
+          <span class="nav-icon">✨</span> <span id="navTitleAi">AI Engine</span>
+        </button>
+        <button class="nav-item" data-tab="tab-preferences">
+          <span class="nav-icon">⚙️</span> Preferences
+        </button>
+        <button class="nav-item advanced-only" data-tab="tab-logs">
+          <span class="nav-icon">📋</span> Logs & AI Inspector
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="../../test-forms/business-directory-form.html" target="_blank" class="test-form-link">
+          🧪 Open Test Form
+        </a>
+        <div class="version-tag">Version 1.0.0 (MV3)</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Notification Banner / Toast -->
+      <div id="saveToast" class="save-toast hidden"></div>
+
+      <!-- TAB 1: PROFILES MANAGER -->
+      <section id="tab-profiles" class="tab-pane active">
+        <div class="pane-header">
+          <div>
+            <h1 class="pane-title">Profiles Manager</h1>
+            <p class="pane-subtitle">Manage your schema-agnostic knowledge bases for businesses, personal info, or clients.</p>
+          </div>
+          <div class="header-actions">
+            <button id="btnNewProfile" class="btn secondary-btn">+ New Profile</button>
+            <button id="btnDuplicateProfile" class="btn secondary-btn">Duplicate</button>
+            <button id="btnDeleteProfile" class="btn danger-btn">Delete</button>
+            <button id="btnSaveProfile" class="btn primary-btn">Save Profile</button>
+          </div>
+        </div>
+
+        <!-- Profile Selector Bar -->
+        <div class="profile-toolbar">
+          <div class="profile-select-group">
+            <label for="activeProfileDropdown" class="label-inline">Active Profile:</label>
+            <select id="activeProfileDropdown" class="select-inline"></select>
+            <span id="activeBadge" class="badge active-badge">ACTIVE</span>
+          </div>
+
+          <div class="mode-toggle-group advanced-only">
+            <button id="btnViewVisual" class="toggle-btn active">Visual Editor</button>
+            <button id="btnViewJson" class="toggle-btn">Raw JSON Editor</button>
+          </div>
+        </div>
+
+        <!-- Visual Editor Mode -->
+        <div id="visualEditorView" class="editor-view">
+          <!-- Profile Name & General -->
+          <div class="form-card">
+            <h3 class="card-title">Profile Identity</h3>
+            <div class="grid-2">
+              <div class="field-group">
+                <label for="profProfileName">Profile Name (Internal Reference)</label>
+                <input type="text" id="profProfileName" class="text-input" placeholder="e.g. Primary Business Profile">
+              </div>
+              <div class="field-group">
+                <label for="profBusinessName">Business / Company Name</label>
+                <input type="text" id="profBusinessName" class="text-input" placeholder="e.g. Acme Corporation">
+              </div>
+              <div class="field-group">
+                <label for="profTradingName">Trading Name / Sub-Title</label>
+                <input type="text" id="profTradingName" class="text-input" placeholder="e.g. Acme Services">
+              </div>
+              <div class="field-group">
+                <label for="profWebsite">Website / Portfolio URL</label>
+                <input type="url" id="profWebsite" class="text-input" placeholder="https://example.com">
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Person -->
+          <div class="form-card">
+            <h3 class="card-title">Key Contact Person</h3>
+            <div class="grid-3">
+              <div class="field-group">
+                <label for="profContactName">Full Name</label>
+                <input type="text" id="profContactName" class="text-input" placeholder="Jane Doe">
+              </div>
+              <div class="field-group">
+                <label for="profFirstName">First Name</label>
+                <input type="text" id="profFirstName" class="text-input" placeholder="Jane">
+              </div>
+              <div class="field-group">
+                <label for="profLastName">Last Name</label>
+                <input type="text" id="profLastName" class="text-input" placeholder="Doe">
+              </div>
+              <div class="field-group">
+                <label for="profEmail">Email Address</label>
+                <input type="email" id="profEmail" class="text-input" placeholder="contact@example.com">
+              </div>
+              <div class="field-group">
+                <label for="profPhone">Primary Phone</label>
+                <input type="tel" id="profPhone" class="text-input" placeholder="+1 555-0199">
+              </div>
+              <div class="field-group">
+                <label for="profMobile">Mobile / Alt Phone</label>
+                <input type="tel" id="profMobile" class="text-input" placeholder="+1 555-0198">
+              </div>
+            </div>
+          </div>
+
+          <!-- Location & Address -->
+          <div class="form-card">
+            <h3 class="card-title">Physical Location & Service Areas</h3>
+            <div class="grid-3">
+              <div class="field-group span-2">
+                <label for="profStreet">Street Address</label>
+                <input type="text" id="profStreet" class="text-input" placeholder="123 Main Street">
+              </div>
+              <div class="field-group">
+                <label for="profCity">City / Suburb</label>
+                <input type="text" id="profCity" class="text-input" placeholder="Springfield">
+              </div>
+              <div class="field-group">
+                <label for="profState">State / Territory</label>
+                <input type="text" id="profState" class="text-input" placeholder="State / Province">
+              </div>
+              <div class="field-group">
+                <label for="profPostalCode">Postal Code</label>
+                <input type="text" id="profPostalCode" class="text-input" placeholder="12345">
+              </div>
+              <div class="field-group">
+                <label for="profCountry">Country</label>
+                <input type="text" id="profCountry" class="text-input" placeholder="Country">
+              </div>
+            </div>
+          </div>
+
+          <!-- Services Offered -->
+          <div class="form-card">
+            <h3 class="card-title">Services & Capabilities (Used for Checkbox & Multi-select Matching)</h3>
+            <p class="field-desc">The AI checks whether form checkboxes match items in this list.</p>
+            <div class="tag-input-container">
+              <input type="text" id="serviceTagInput" class="text-input" placeholder="Type a service and press Enter (e.g. Consulting, Support)...">
+              <button id="btnAddServiceTag" class="btn secondary-btn">Add Service</button>
+            </div>
+            <div id="serviceTagsList" class="tags-cloud"></div>
+          </div>
+
+          <!-- Operating Hours Builder -->
+          <div class="form-card">
+            <div class="card-header-row">
+              <h3 class="card-title">Operating / Trading Hours</h3>
+              <label class="checkbox-label">
+                <input type="checkbox" id="profHours247"> 24/7 Commercial Availability
+              </label>
+            </div>
+            <div class="hours-grid">
+              <div class="hours-row">
+                <span class="day-label">Monday</span>
+                <input type="time" id="hours_mon_open" class="time-input" value="07:00">
+                <span>to</span>
+                <input type="time" id="hours_mon_close" class="time-input" value="18:00">
+                <label class="closed-label"><input type="checkbox" id="hours_mon_closed"> Closed</label>
+              </div>
+              <div class="hours-row">
+                <span class="day-label">Tuesday</span>
+                <input type="time" id="hours_tue_open" class="time-input" value="07:00">
+                <span>to</span>
+                <input type="time" id="hours_tue_close" class="time-input" value="18:00">
+                <label class="closed-label"><input type="checkbox" id="hours_tue_closed"> Closed</label>
+              </div>
+              <div class="hours-row">
+                <span class="day-label">Wednesday</span>
+                <input type="time" id="hours_wed_open" class="time-input" value="07:00">
+                <span>to</span>
+                <input type="time" id="hours_wed_close" class="time-input" value="18:00">
+                <label class="closed-label"><input type="checkbox" id="hours_wed_closed"> Closed</label>
+              </div>
+              <div class="hours-row">
+                <span class="day-label">Thursday</span>
+                <input type="time" id="hours_thu_open" class="time-input" value="07:00">
+                <span>to</span>
+                <input type="time" id="hours_thu_close" class="time-input" value="18:00">
+                <label class="closed-label"><input type="checkbox" id="hours_thu_closed"> Closed</label>
+              </div>
+              <div class="hours-row">
+                <span class="day-label">Friday</span>
+                <input type="time" id="hours_fri_open" class="time-input" value="07:00">
+                <span>to</span>
+                <input type="time" id="hours_fri_close" class="time-input" value="18:00">
+                <label class="closed-label"><input type="checkbox" id="hours_fri_closed"> Closed</label>
+              </div>
+              <div class="hours-row">
+                <span class="day-label">Saturday</span>
+                <input type="time" id="hours_sat_open" class="time-input" value="08:00">
+                <span>to</span>
+                <input type="time" id="hours_sat_close" class="time-input" value="16:00">
+                <label class="closed-label"><input type="checkbox" id="hours_sat_closed"> Closed</label>
+              </div>
+              <div class="hours-row">
+                <span class="day-label">Sunday</span>
+                <input type="time" id="hours_sun_open" class="time-input" value="08:00">
+                <span>to</span>
+                <input type="time" id="hours_sun_close" class="time-input" value="16:00">
+                <label class="closed-label"><input type="checkbox" id="hours_sun_closed"> Closed</label>
+              </div>
+            </div>
+            <div class="field-group" style="margin-top: 14px;">
+              <label for="profHoursRaw">Raw / Additional Hours Notes (e.g. After-hours emergency support)</label>
+              <input type="text" id="profHoursRaw" class="text-input" placeholder="e.g. Available 24/7 on call for emergency requests">
+            </div>
+          </div>
+
+          <!-- Business Descriptions -->
+          <div class="form-card">
+            <h3 class="card-title">Business Descriptions & Copy</h3>
+            <div class="field-group">
+              <div class="label-row">
+                <label for="profDescShort">Short Pitch / Summary (Used for fields with character limits)</label>
+                <span id="shortCharCount" class="char-count">0 chars</span>
+              </div>
+              <input type="text" id="profDescShort" class="text-input" placeholder="Brief summary under 140 characters...">
+            </div>
+            <div class="field-group" style="margin-top: 12px;">
+              <label for="profDescFull">Comprehensive Full Description</label>
+              <textarea id="profDescFull" class="textarea-input" rows="6" placeholder="Full overview of services, coverage areas, equipment, and company scope..."></textarea>
+            </div>
+          </div>
+
+          <!-- FAQs & Knowledge -->
+          <div class="form-card">
+            <div class="card-header-row">
+              <h3 class="card-title">Questions, FAQs & Business Knowledge</h3>
+              <button id="btnAddFaq" class="btn secondary-btn">+ Add Q&A</button>
+            </div>
+            <div id="faqList" class="faq-container"></div>
+          </div>
+
+          <!-- Custom Key-Value Fields -->
+          <div class="form-card">
+            <div class="card-header-row">
+              <h3 class="card-title">Custom Key-Value Attributes</h3>
+              <button id="btnAddCustomField" class="btn secondary-btn">+ Add Custom Field</button>
+            </div>
+            <p class="field-desc">Add arbitrary facts (e.g. ABN, Insurances, Police Clearances, Year Established). Gemini AI can reference these for any form field.</p>
+            <div id="customFieldsList" class="custom-fields-container"></div>
+          </div>
+        </div>
+
+        <!-- Raw JSON Editor Mode -->
+        <div id="jsonEditorView" class="editor-view hidden">
+          <div class="json-editor-toolbar">
+            <button id="btnFormatJson" class="btn secondary-btn">Format JSON</button>
+            <button id="btnApplyJson" class="btn primary-btn">Apply JSON to Profile</button>
+          </div>
+          <textarea id="rawJsonTextarea" class="json-textarea" spellcheck="false"></textarea>
+        </div>
+      </section>
+
+      <!-- TAB 2: IMPORT & EXPORT -->
+      <section id="tab-import-export" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h1 class="pane-title">Import & Export Configurations</h1>
+            <p class="pane-subtitle">Transfer profiles between browsers, backup your knowledge base, or swap complete configurations.</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Import Card -->
+          <div class="form-card">
+            <h3 class="card-title">Import JSON Configuration</h3>
+            <p class="field-desc">Upload or paste any JSON configuration (including legacy extension files, SmartForm backups, or custom profiles).</p>
+
+            <div class="import-mode-selection advanced-only">
+              <label class="radio-label">
+                <input type="radio" name="importMode" value="replace" checked>
+                <div>
+                  <strong>Replace All (Recommended)</strong>
+                  <div class="subtext">Completely replaces current profiles and settings with the imported configuration.</div>
+                </div>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="importMode" value="append">
+                <div>
+                  <strong>Append / Merge</strong>
+                  <div class="subtext">Adds the imported profiles alongside your existing profiles without overwriting.</div>
+                </div>
+              </label>
+            </div>
+
+            <!-- Drag and Drop Zone -->
+            <div id="dropZone" class="drop-zone">
+              <span class="drop-icon">📁</span>
+              <p>Drag and drop your <strong>.json</strong> file here, or <label for="fileUploadInput" class="file-browse-link">browse</label></p>
+              <input type="file" id="fileUploadInput" accept=".json,application/json" class="hidden">
+            </div>
+
+            <div class="divider-text advanced-only">OR PASTE JSON DIRECTLY</div>
+
+            <textarea id="importTextarea" class="textarea-input advanced-only" rows="8" placeholder="Paste your exported JSON here..."></textarea>
+
+            <button id="btnExecuteImport" class="btn primary-btn full-width" style="margin-top: 12px;">
+              📥 Process & Import Configuration
+            </button>
+
+            <div id="importStatusBox" class="status-box hidden"></div>
+          </div>
+
+          <!-- Export Card -->
+          <div class="form-card">
+            <h3 class="card-title">Export Backup</h3>
+            <p class="field-desc">Download all your active profiles, custom fields, and configuration into a portable JSON file.</p>
+
+            <div class="export-options advanced-only">
+              <label class="checkbox-label" style="margin-bottom: 16px;">
+                <input type="checkbox" id="exportIncludeApiKey"> Include API Keys in export
+              </label>
+              <p class="field-desc text-warning">⚠️ Keep unchecked if you plan to share this JSON file with others!</p>
+            </div>
+
+            <button id="btnExecuteExport" class="btn secondary-btn full-width" style="margin-top: 16px;">
+              📤 Export All Profiles to JSON File
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: AI ENGINE & PROVIDERS -->
+      <section id="tab-ai" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h1 class="pane-title">AI Engine & Providers</h1>
+            <p class="pane-subtitle">Choose between free Google Gemini, local offline models (Ollama, LM Studio), Claude, or OpenAI.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button id="btnTestApiKey" class="btn secondary-btn">Test Connection</button>
+            <button id="btnSaveAiSettings" class="btn primary-btn">Save AI Settings</button>
+          </div>
+        </div>
+
+        <div id="apiTestStatus" class="test-status-box hidden" style="margin-bottom: 20px;"></div>
+
+        <!-- Provider Selection Card -->
+        <div class="form-card">
+          <h3 class="card-title">Active AI Provider</h3>
+          <div class="provider-radio-group">
+            <label class="provider-radio-label">
+              <input type="radio" name="aiProvider" value="gemini" checked>
+              <div class="provider-card-inner">
+                <span class="provider-name">Google Gemini</span>
+                <span class="provider-desc">Official cloud API with generous free tier.</span>
+              </div>
+            </label>
+
+            <label class="provider-radio-label">
+              <input type="radio" name="aiProvider" value="openai-compatible">
+              <div class="provider-card-inner">
+                <span class="provider-name" id="providerNameOpenAi">OpenAI</span>
+                <span class="provider-desc" id="providerDescOpenAi">Cloud model (gpt-4o-mini).</span>
+              </div>
+            </label>
+
+            <label class="provider-radio-label">
+              <input type="radio" name="aiProvider" value="claude">
+              <div class="provider-card-inner">
+                <span class="provider-name">Anthropic Claude</span>
+                <span class="provider-desc">Claude 3.5 Haiku, Sonnet via Anthropic API.</span>
+              </div>
+            </label>
+
+            <label class="provider-radio-label advanced-only">
+              <input type="radio" name="aiProvider" value="custom">
+              <div class="provider-card-inner">
+                <span class="provider-name">Custom Endpoint</span>
+                <span class="provider-desc">Power-user custom URL, headers & body template.</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 1. Google Gemini Config Panel -->
+        <div id="panel-provider-gemini" class="form-card provider-panel">
+          <h3 class="card-title">Google Gemini Settings</h3>
+          <p class="field-desc">
+            SmartForm AI connects directly to Google's official Gemini endpoint. No middleman servers or third-party tracking.
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="external-link">Get a free API Key at Google AI Studio ↗</a>
+          </p>
+
+          <div class="field-group">
+            <label for="geminiApiKey">Google Gemini API Key</label>
+            <div class="input-with-icon">
+              <input type="password" id="geminiApiKey" class="text-input" placeholder="AIzaSy...">
+              <button id="btnToggleApiKey" class="icon-toggle-btn" title="Toggle Show/Hide">👁️</button>
+            </div>
+          </div>
+
+          <div class="field-group" style="margin-top: 14px;">
+            <label for="geminiModelSelect">Gemini Model</label>
+            <select id="geminiModelSelect" class="select-input">
+              <option value="gemini-3.1-flash-lite" selected>Gemini 3.1 Flash Lite (Ultra-Fast & Responsive)</option>
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash (Balanced Smart & Fast)</option>
+              <option value="gemini-4-hydrogen">Gemini 4 Hydrogen (Advanced Reasoning)</option>
+            </select>
+          </div>
+
+          <div class="field-group advanced-only" style="margin-top: 14px;">
+            <label for="geminiCustomModel">Custom Model Override (Optional)</label>
+            <input type="text" id="geminiCustomModel" class="text-input" placeholder="e.g. gemini-2.5-pro-exp (overrides dropdown above)">
+          </div>
+        </div>
+
+        <!-- 2. OpenAI / Ollama / Local Config Panel -->
+        <div id="panel-provider-openai" class="form-card provider-panel hidden">
+          <div class="card-header-row">
+            <h3 class="card-title" id="panelTitleOpenAi">OpenAI Settings</h3>
+            <div class="quick-preset-container advanced-only">
+              <label for="openaiPresetSelect" style="font-size: 12px; color: var(--text-muted); margin-right: 6px;">Quick Preset:</label>
+              <select id="openaiPresetSelect" class="select-input" style="width: auto; padding: 4px 10px; font-size: 12px;">
+                <option value="openai" selected>OpenAI (Cloud)</option>
+                <option value="ollama-local">Ollama Local (http://localhost:11434)</option>
+                <option value="lmstudio-local">LM Studio Local (http://localhost:1234)</option>
+                <option value="deepseek">DeepSeek (Cloud)</option>
+                <option value="groq">Groq (Cloud - Ultra Fast Llama 3)</option>
+                <option value="custom">-- Custom Endpoint --</option>
+              </select>
+            </div>
+          </div>
+          <p class="field-desc" id="panelDescOpenAi">
+            Connect to OpenAI. For local models like <strong>Ollama</strong>, switch to Advanced Mode.
+          </p>
+
+          <div class="field-group advanced-only">
+            <label for="openaiBaseUrl">Endpoint URL</label>
+            <input type="text" id="openaiBaseUrl" class="text-input" placeholder="https://api.openai.com/v1/chat/completions">
+            <span class="field-desc">Supports standard OpenAI, local Ollama (<code>/api/chat</code>), and LM Studio.</span>
+          </div>
+
+          <div class="grid-2" style="margin-top: 14px;">
+            <div class="field-group">
+              <label for="openaiModel">Model Name / Tag</label>
+              <input type="text" id="openaiModel" class="text-input" placeholder="e.g. gpt-4o-mini, qwen2.5:3b, llama3.2">
+            </div>
+
+            <div class="field-group">
+              <label for="openaiApiKey">API Key</label>
+              <input type="password" id="openaiApiKey" class="text-input" placeholder="sk-proj-...">
+            </div>
+          </div>
+
+          <!-- Ollama Security & Origin Setup Callout (Hidden unless Ollama is active in Advanced Mode) -->
+          <div id="ollamaOriginTip" class="security-tip-box hidden" style="margin-top: 16px;">
+            <div class="tip-header">
+              <span class="tip-icon">🛡️</span>
+              <strong>Ollama Security & Origin Setup</strong>
+            </div>
+            <p class="tip-desc">
+              By default, Ollama blocks browser requests. To safely allow <strong>only this extension</strong> without exposing your local Ollama instance to other websites or extensions, start Ollama with your exact extension origin:
+            </p>
+            <div class="code-copy-row">
+              <code id="ollamaCmdText">OLLAMA_ORIGINS="chrome-extension://..." ollama serve</code>
+              <button type="button" id="btnCopyOllamaCmd" class="btn-micro" title="Copy command">📋 Copy</button>
+            </div>
+            <div class="tip-subtext" style="margin-top: 8px;">
+              <span>Windows (PowerShell): <code id="ollamaCmdWin">$env:OLLAMA_ORIGINS="..."; ollama serve</code></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Anthropic Claude Config Panel -->
+        <div id="panel-provider-claude" class="form-card provider-panel hidden">
+          <h3 class="card-title">Anthropic Claude Settings</h3>
+          <p class="field-desc">
+            Connect directly to Anthropic's Claude Messages API.
+            <a href="https://console.anthropic.com/settings/keys" target="_blank" class="external-link">Get an Anthropic API Key ↗</a>
+          </p>
+
+          <div class="field-group">
+            <label for="claudeApiKey">Anthropic API Key</label>
+            <input type="password" id="claudeApiKey" class="text-input" placeholder="sk-ant-api...">
+          </div>
+
+          <div class="field-group" style="margin-top: 14px;">
+            <label for="claudeModel">Claude Model</label>
+            <select id="claudeModel" class="select-input">
+              <option value="claude-3-5-haiku-20241022" selected>Claude 3.5 Haiku (Fast & Affordable)</option>
+              <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (State-of-the-Art)</option>
+              <option value="claude-3-7-sonnet">Claude 3.7 Sonnet</option>
+            </select>
+          </div>
+
+          <div class="field-group advanced-only" style="margin-top: 14px;">
+            <label for="claudeCustomModel">Custom Model Override (Optional)</label>
+            <input type="text" id="claudeCustomModel" class="text-input" placeholder="e.g. claude-3-7-sonnet (overrides dropdown above)">
+          </div>
+        </div>
+
+        <!-- 4. Custom Webhook / Power User Panel -->
+        <div id="panel-provider-custom" class="form-card provider-panel advanced-only hidden">
+          <h3 class="card-title">Custom HTTP Endpoint (Power Users)</h3>
+          <p class="field-desc">
+            Define an arbitrary JSON endpoint with custom headers, body template tokens, and response extraction path.
+          </p>
+
+          <div class="field-group">
+            <label for="customEndpointUrl">Endpoint URL</label>
+            <input type="text" id="customEndpointUrl" class="text-input" placeholder="https://my-custom-proxy.internal/v1/generate">
+          </div>
+
+          <div class="field-group" style="margin-top: 14px;">
+            <label for="customHeaders">Custom Request Headers (One per line: Header: Value)</label>
+            <textarea id="customHeaders" class="textarea-input" rows="2" placeholder="Authorization: Bearer my-secret-token&#10;X-Custom-Tenant: 123"></textarea>
+          </div>
+
+          <div class="field-group" style="margin-top: 14px;">
+            <label for="customBodyTemplate">Request Body Template (Use tokens: <code>{{SYSTEM_PROMPT}}</code>, <code>{{USER_PROMPT}}</code>, <code>{{MODEL}}</code>, <code>{{TEMPERATURE}}</code>)</label>
+            <textarea id="customBodyTemplate" class="textarea-input" rows="4"></textarea>
+          </div>
+
+          <div class="grid-2" style="margin-top: 14px;">
+            <div class="field-group">
+              <label for="customResponsePath">Response Text Dot-Path</label>
+              <input type="text" id="customResponsePath" class="text-input" placeholder="e.g. choices[0].message.content or response">
+            </div>
+
+            <div class="field-group">
+              <label for="customModel">Model Parameter (Token {{MODEL}})</label>
+              <input type="text" id="customModel" class="text-input" placeholder="e.g. custom-model-name">
+            </div>
+          </div>
+        </div>
+
+        <!-- Common Model & Reasoning Preferences (Advanced Only) -->
+        <div class="form-card advanced-only">
+          <h3 class="card-title">Reasoning, Performance & System Persona</h3>
+          <div class="grid-3">
+            <div class="field-group">
+              <label for="aiTimeoutSeconds">AI Request Timeout (seconds)</label>
+              <input type="number" id="aiTimeoutSeconds" class="text-input" min="5" placeholder="90" value="90">
+              <span class="field-desc">Max seconds to wait before timeout (e.g. 30s cloud, 90s+ local).</span>
+            </div>
+
+            <div class="field-group">
+              <label for="temperatureSlider">Determinism (Temp): <span id="tempValueDisplay">0.1</span></label>
+              <input type="range" id="temperatureSlider" min="0" max="1" step="0.05" value="0.1" class="slider-input">
+              <span class="field-desc">Low values (0.0 - 0.2) ensure strictly factual form fills.</span>
+            </div>
+
+            <div class="field-group">
+              <label for="customPromptInstructions">Custom System Persona</label>
+              <textarea id="customPromptInstructions" class="textarea-input" rows="3" placeholder="e.g. Act as a senior executive assistant..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simple Mode Helper Banner -->
+        <div class="simple-mode-hint simple-only">
+          <span>💡 Need local offline models (Ollama, LM Studio), custom timeouts, or prompt tuning? Switch to <strong>🛠️ Advanced Mode</strong> in the sidebar.</span>
+        </div>
+      </section>
+
+      <!-- TAB 4: PREFERENCES -->
+      <section id="tab-preferences" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h1 class="pane-title">Filling Preferences</h1>
+            <p class="pane-subtitle">Configure the hybrid engine and on-page visual feedback.</p>
+          </div>
+          <button id="btnSavePreferences" class="btn primary-btn">Save Preferences</button>
+        </div>
+
+        <div class="form-card">
+          <h3 class="card-title">Engine Behavior</h3>
+          <div class="toggle-row advanced-only">
+            <div>
+              <strong>Enable Tier 1 (Fast Pattern Matching)</strong>
+              <div class="subtext">Instantly fills standard fields (email, phone, name) with 0 latency and 0 tokens.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="prefTier1Enabled" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row advanced-only">
+            <div>
+              <strong>Enable Tier 2 (AI Reasoning Engine)</strong>
+              <div class="subtext">Uses AI to reason over complex fields (descriptions, hours, categories, dropdowns).</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="prefTier2Enabled" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div>
+              <strong>Only Fill Empty Fields</strong>
+              <div class="subtext">Protects fields you have already typed into from being overwritten.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="prefFillOnlyEmpty" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div>
+              <strong>Enable Smart Learning Mode</strong>
+              <div class="subtext">Prompt to save newly answered fields into your active profile when you fill them manually.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="prefSmartLearningEnabled" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row advanced-only">
+            <div>
+              <strong>Enable Detailed AI Inspector Logs</strong>
+              <div class="subtext">Stores full prompts and raw responses in local history for inspection. Keep disabled for maximum privacy.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="prefDebugLogging">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <!-- Domain Exclusion Blacklist (Advanced Only) -->
+          <div class="field-group advanced-only" style="margin-top: 18px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+            <label for="prefDomainBlacklist">Domain Exclusion Blacklist</label>
+            <textarea id="prefDomainBlacklist" class="textarea-input" rows="3" placeholder="paypal.com&#10;chase.com&#10;internal-crm.company"></textarea>
+            <span class="field-desc">SmartForm AI will automatically stay disabled and never scan fields or mount the floating button on these domains (one per line or comma-separated).</span>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3 class="card-title">On-Page Floating Widget</h3>
+          <div class="toggle-row">
+            <div>
+              <strong>Show Floating '✨ AI Fill' Button</strong>
+              <div class="subtext">Displays an unobtrusive 1-click fill pill on web pages containing forms.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="prefShowFloatingButton" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="field-group" style="margin-top: 12px; max-width: 320px;">
+            <label for="prefFloatingPos">Floating Button Screen Position</label>
+            <select id="prefFloatingPos" class="select-input">
+              <option value="bottom-right" selected>Bottom Right</option>
+              <option value="bottom-left">Bottom Left</option>
+              <option value="top-right">Top Right</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-card advanced-only">
+          <h3 class="card-title">Visual Feedback</h3>
+          <div class="field-group" style="max-width: 320px;">
+            <label for="prefHighlightDuration">Filled Glow Highlight Duration (ms)</label>
+            <input type="number" id="prefHighlightDuration" class="text-input" value="2500" step="500" min="500" max="10000">
+            <span class="field-desc">Duration the glowing outline stays on filled inputs.</span>
+          </div>
+        </div>
+
+        <!-- Simple Mode Helper Banner -->
+        <div class="simple-mode-hint simple-only">
+          <span>💡 Looking for regex bypass, highlight duration, or domain blacklist? Switch to <strong>🛠️ Advanced Mode</strong> in the sidebar.</span>
+        </div>
+      </section>
+
+      <!-- TAB 5: LOGS & AI INSPECTOR -->
+      <section id="tab-logs" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h1 class="pane-title">Fill Logs & AI Inspector</h1>
+            <p class="pane-subtitle">Inspect recent form fills and view exact AI prompts and responses for transparent debugging.</p>
+          </div>
+          <button id="btnClearLogs" class="btn danger-btn">Clear Logs</button>
+        </div>
+
+        <div class="form-card">
+          <div id="logsEmptyNotice" class="subtext" style="padding: 16px 0;">No form fills recorded yet. Run a fill on any web page to see live telemetry here.</div>
+          <div id="logsTableContainer" class="table-container hidden">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Domain</th>
+                  <th>Fields Filled</th>
+                  <th>Duration</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="logsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Last AI Inspection Modal / Card -->
+        <div id="aiInspectorCard" class="form-card advanced-only hidden" style="margin-top: 20px;">
+          <h3 class="card-title">AI Prompt & Response Inspector</h3>
+          <div class="grid-2">
+            <div>
+              <label class="card-label">Prompt Sent to Gemini</label>
+              <textarea id="inspectPromptText" class="code-box" readonly rows="12"></textarea>
+            </div>
+            <div>
+              <label class="card-label">Raw Response from Gemini</label>
+              <textarea id="inspectResponseText" class="code-box" readonly rows="12"></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

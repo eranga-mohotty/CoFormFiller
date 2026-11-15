@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="sparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Rounded App Background -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bgGrad)" />
+
+  <!-- Form Sheet -->
+  <rect x="28" y="24" width="72" height="80" rx="10" fill="#ffffff" opacity="0.96" />
+  
+  <!-- Form Header Line -->
+  <rect x="38" y="36" width="32" height="6" rx="3" fill="#4f46e5" />
+  
+  <!-- Form Field 1 -->
+  <rect x="38" y="48" width="52" height="8" rx="4" fill="#e2e8f0" />
+  <rect x="38" y="48" width="36" height="8" rx="4" fill="#3b82f6" opacity="0.5" />
+
+  <!-- Form Field 2 -->
+  <rect x="38" y="62" width="52" height="8" rx="4" fill="#e2e8f0" />
+  <rect x="38" y="62" width="46" height="8" rx="4" fill="#10b981" opacity="0.6" />
+
+  <!-- Form Field 3 (Checkboxes / Multi) -->
+  <circle cx="43" cy="79" r="4" fill="#10b981" />
+  <rect x="52" y="77" width="38" height="5" rx="2.5" fill="#94a3b8" />
+
+  <!-- AI Sparkle / Magic Star Badge -->
+  <g transform="translate(68, 58)" filter="url(#glow)">
+    <circle cx="28" cy="28" r="22" fill="#0f172a" />
+    <!-- 4-point Sparkle Star -->
+    <path d="M 28 12 Q 28 28 44 28 Q 28 28 28 44 Q 28 28 12 28 Q 28 28 28 12 Z" fill="url(#sparkleGrad)" />
+  </g>
+</svg>
