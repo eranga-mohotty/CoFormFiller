@@ -58,7 +58,7 @@
 <body>
   <div class="card">
     <h2>Supplier Tender - Contractor Registration</h2>
-    <form onsubmit="event.preventDefault(); alert('Tender submitted!');">
+    <form id="quoteForm">
       <div class="form-group">
         <label class="title" for="tender_company">Company Name</label>
         <input type="text" id="tender_company" name="tender_company">
@@ -100,6 +100,7 @@
       <button type="submit" class="btn">Register as Supplier</button>
     </form>
   </div>
+  <script src="test-form-handler.js"></script>
   <script type="module" src="../src/content/content.js"></script>
 </body>
 </html>

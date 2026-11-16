@@ -1,6 +1,7 @@
 # SmartForm AI - Intelligent Form Filling Agent (Manifest V3)
 
 SmartForm AI is a next-generation, schema-agnostic Chrome Extension that automates web form filling using a **Hybrid Two-Tier Engine**:
+
 - **Tier 1 (Fast Pattern Matching)**: Instantly matches obvious fields (Email, Phone, Name, Suburb) with zero latency and zero API cost.
 - **Tier 2 (Pluggable Multi-Provider AI Reasoning)**: Intelligently handles complex form architectures:
   - Adapting business descriptions to field character limits (`maxLength`).
@@ -21,7 +22,7 @@ SmartForm AI connects directly from your browser to your chosen AI engine withou
    - Free tier with Google AI Studio key.
 2. **Local Offline Models (Zero Cloud Data Leakage)**:
    - **Ollama**: `http://localhost:11434/api/chat` (e.g. `qwen2.5:3b`, `llama3.2`). Zero API key required!
-     - *Security Best Practice*: To prevent unauthorized web pages from querying your local models, run Ollama allowing only your specific extension origin: `OLLAMA_ORIGINS="chrome-extension://<id>" ollama serve` (or `moz-extension://<uuid>` on Firefox). The Settings UI includes a 1-click copy button with your exact ID.
+     - _Security Best Practice_: To prevent unauthorized web pages from querying your local models, run Ollama allowing only your specific extension origin: `OLLAMA_ORIGINS="chrome-extension://<id>" ollama serve` (or `moz-extension://<uuid>` on Firefox). The Settings UI includes a 1-click copy button with your exact ID.
    - **LM Studio**: `http://localhost:1234/v1/chat/completions` (e.g. `local-model`).
 3. **OpenAI & Compatible Cloud Services**:
    - OpenAI (`gpt-4o-mini`, `gpt-4o`).
@@ -63,7 +64,7 @@ SmartForm AI connects directly from your browser to your chosen AI engine withou
 3. Click the **Load unpacked** button.
 4. Select the project directory:
    ```
-   /home/eranga/.gemini/antigravity/scratch/smartform-ai-extension
+   ./smartform-ai-extension
    ```
 5. The **SmartForm AI** extension icon will now appear in your browser toolbar!
 
@@ -72,7 +73,7 @@ SmartForm AI connects directly from your browser to your chosen AI engine withou
 ## Setup & First Fill
 
 1. **Import Your Profile**:
-   - Click the extension icon in the toolbar, then click the **⚙️ Settings** icon (or right-click the extension icon -> *Options*).
+   - Click the extension icon in the toolbar, then click the **⚙️ Settings** icon (or right-click the extension icon -> _Options_).
    - Navigate to the **Import & Export** tab.
    - Paste or drag-and-drop your exported JSON configuration file.
    - Click **Process & Import Configuration**. All your services, FAQs, address, contact details, and descriptions will load instantly!
@@ -80,14 +81,14 @@ SmartForm AI connects directly from your browser to your chosen AI engine withou
    - Go to the **AI Engine & Providers** tab.
    - Select your active provider:
      - **Google Gemini**: Enter your free Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-     - **OpenAI & Local Models**: Select a Quick Preset (e.g. *Ollama Local* or *LM Studio Local*), or enter your endpoint and model name.
+     - **OpenAI & Local Models**: Select a Quick Preset (e.g. _Ollama Local_ or _LM Studio Local_), or enter your endpoint and model name.
      - **Anthropic Claude**: Enter your Claude API key.
      - **Custom Endpoint**: Configure custom headers and templates.
    - Click **Test Connection** to verify connection and measure round-trip latency.
    - Click **Save AI Settings**.
 3. **Test with the Local Business Directory**:
    - In the settings sidebar, click **🧪 Open Test Form** (or open `test-forms/business-directory-form.html` in Chrome).
-   - Click the floating `✨ AI Fill` button (or click the extension popup and hit *⚡ Fill Form on Page*).
+   - Click the floating `✨ AI Fill` button (or click the extension popup and hit _⚡ Fill Form on Page_).
    - Watch the form fill with company name, contact info, operating hours, service checkboxes, character-limited descriptions, and FAQs!
 
 ---
@@ -144,10 +145,10 @@ smartform-ai-extension/
 ## Developer Workflow: Trunk-Based Development
 
 To maintain a healthy, always-deployable codebase:
+
 1. **Trunk-Based Branches**: All commits go directly into `main` (trunk) or short-lived feature branches merged immediately upon verification.
 2. **Pre-Commit Verification**: Run the full test suite before committing:
    ```bash
    node test/test-importer.js && node test/test-pipeline.js && node test/test-edge-cases.js && node test/test-learning.js && node test/test-multi-provider.js && node test/test-encryption.js
    ```
 3. **Atomic Commits**: Commit each feature when completed and verified before proceeding to the next feature.
-
