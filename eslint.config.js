@@ -3,10 +3,10 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['node_modules/', 'test-forms/', 'test/']
+    ignores: ['node_modules/', 'dist/', 'test-forms/', 'test/']
   },
   {
-    files: ['src/**/*.js'],
+    files: ['src/**/*.{js,ts}'],
     plugins: {
       'no-unsanitized': noUnsanitized
     },

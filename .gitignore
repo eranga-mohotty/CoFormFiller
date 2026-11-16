@@ -15,3 +15,6 @@ npm-debug.log*
 *.tmp
 *.swp
 *.bak
+
+# Build Output
+dist/
