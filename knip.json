@@ -1,20 +1,18 @@
 {
   "$schema": "https://unpkg.com/knip@5/overview/configuration-schema.json",
   "entry": [
-    "src/background/service-worker.{js,ts}",
-    "src/content/content.{js,ts}",
-    "src/content/inserter.{js,ts}",
-    "src/engine/scanner.{js,ts}",
-    "src/engine/pattern-matcher.{js,ts}",
-    "src/options/options.{js,ts}",
-    "src/popup/popup.{js,ts}",
-    "src/types/index.{js,ts}",
-    "test/*.{js,ts}",
-    "build.js"
+    "src/background/service-worker.ts",
+    "src/content/content.ts",
+    "src/content/inserter.ts",
+    "src/engine/scanner.ts",
+    "src/engine/pattern-matcher.ts",
+    "src/options/options.ts",
+    "src/popup/popup.ts",
+    "src/types/index.ts",
+    "test/*.js"
   ],
   "project": [
-    "src/**/*.{js,ts}",
-    "test/**/*.{js,ts}",
-    "build.js"
+    "src/**/*.ts",
+    "test/**/*.js"
   ]
 }
