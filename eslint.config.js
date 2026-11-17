@@ -1,5 +1,6 @@
 import noUnsanitized from 'eslint-plugin-no-unsanitized';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 export default [
   {
@@ -33,6 +34,24 @@ export default [
       // Best Practices
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
       'no-undef': 'error'
+    }
+  },
+  {
+    files: ['src/**/*.ts'],
+    plugins: {
+      '@typescript-eslint': tseslint.plugin
+    },
+    languageOptions: {
+      parser: tseslint.parser
+    },
+    rules: {
+      'no-undef': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }]
     }
   }
 ];

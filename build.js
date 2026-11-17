@@ -171,6 +171,8 @@ async function main() {
   if (isWatch) {
     await startWatchMode(buildOptions);
   } else {
+    console.log('[build] Cleaning dist/ directory...');
+    fs.rmSync(distDir, { recursive: true, force: true });
     console.log('[build] Building production bundle in dist/...');
     const ctx = await esbuild.context(buildOptions);
     await ctx.rebuild();
