@@ -56,17 +56,24 @@ SmartForm AI connects directly from your browser to your chosen AI engine withou
 
 ## Quickstart: Installing in Chrome / Chromium / Brave
 
-1. Open your browser and navigate to:
+1. **Install dependencies and build the extension bundle**:
+   ```bash
+   cd smartform-ai-extension
+   npm install
+   npm run build
+   ```
+   This compiles all TypeScript modules via `esbuild` and populates the `dist/` distribution folder.
+2. Open your browser and navigate to:
    ```
    chrome://extensions
    ```
-2. Enable **Developer mode** (toggle switch in the top right corner).
-3. Click the **Load unpacked** button.
-4. Select the project directory:
+3. Enable **Developer mode** (toggle switch in the top right corner).
+4. Click the **Load unpacked** button.
+5. Select the **`dist/`** directory:
    ```
-   ./smartform-ai-extension
+   ./smartform-ai-extension/dist
    ```
-5. The **SmartForm AI** extension icon will now appear in your browser toolbar!
+6. The **SmartForm AI** extension icon will now appear in your browser toolbar!
 
 ---
 
@@ -97,58 +104,104 @@ SmartForm AI connects directly from your browser to your chosen AI engine withou
 
 ```
 smartform-ai-extension/
-├── manifest.json                  # Manifest V3 extension configuration
+├── manifest.json                  # Extension manifest (synced to dist/manifest.json)
+├── build.js                       # esbuild bundler script (outputs to dist/)
+├── tsconfig.json                  # Strict TypeScript compiler configuration
+├── knip.json                      # Dead code and unused dependency scanner
+├── AGENTS.md                      # Autonomous Agent Operating Guide & project standards
 ├── README.md                      # Documentation & instructions
-├── src/
+├── dist/                          # Compiled, loadable extension package (gitignored)
+├── src/                           # 100% Strict TypeScript source files
+│   ├── types/                     # Centralized domain, storage, engine & message types
+│   │   ├── domain.ts              # Profile, business hours, FAQ & learned field models
+│   │   ├── storage.ts             # Storage schemas, vault status, export payloads
+│   │   ├── messages.ts            # ExtensionMessage discriminated unions & response envelopes
+│   │   ├── engine.ts              # Field analysis, match result & AI provider options
+│   │   └── index.ts               # Unified type exports barrel
 │   ├── background/
-│   │   └── service-worker.js     # Background worker handling AI dispatching & messaging
+│   │   ├── service-worker.ts      # MV3 service worker lifecycle & alarm scheduler
+│   │   ├── message-handlers.ts    # Dual-action dispatch & message routing
+│   │   └── vault-handlers.ts      # Vault state machine, PIN authentication, badge updates
 │   ├── content/
-│   │   ├── content.js            # Content script injecting floating button & orchestrating fills
-│   │   ├── content.css           # Glowing highlights & floating pill styling
-│   │   └── inserter.js           # Framework-aware DOM property setter & event dispatcher
+│   │   ├── content.ts             # In-page orchestrator & message listener
+│   │   ├── content.css            # Floating button styling & highlight animations
+│   │   ├── inserter.ts            # Framework-aware DOM property setter & event dispatcher
+│   │   ├── inserter-normalization.ts # Select option matching & combobox normalizers
+│   │   ├── floating-button.ts     # In-page floating "✨ AI Fill" pill
+│   │   ├── toast.ts               # Status notification toasts
+│   │   ├── unlock-modal.ts        # In-page vault PIN unlock modal
+│   │   └── learning-card.ts       # Smart Learning Mode prompt card
 │   ├── engine/
-│   │   ├── scanner.js            # DOM inspector extracting fields, labels, limits & contexts
-│   │   ├── pattern-matcher.js    # Tier 1: Fast regex heuristic matcher (0 tokens)
-│   │   └── ai-agent.js           # Tier 2: Universal AI reasoning client (Gemini, Ollama, Claude, Custom)
+│   │   ├── scanner.ts             # DOM field extractor (tags, types, labels, limits)
+│   │   ├── scanner-rules.ts       # Security filters (blocks passwords, OTPs, captchas)
+│   │   ├── pattern-matcher.ts     # Tier 1: Fast regex heuristic matcher (0 latency/tokens)
+│   │   ├── ai-agent.ts            # Tier 2: Multi-provider reasoning orchestrator
+│   │   └── ai/                    # Pluggable AI transports & payload builders
+│   │       ├── prompt-builder.ts  # Schema-constrained prompt constructor
+│   │       ├── response-parser.ts # Robust JSON extractor (markdown fences, chat, arrays)
+│   │       ├── gemini-transport.ts# Google Gemini REST client
+│   │       ├── openai-transport.ts# OpenAI & Ollama/LM Studio compatible client
+│   │       ├── claude-transport.ts# Anthropic Claude Messages API client
+│   │       └── custom-transport.ts# Custom HTTP endpoint client with template tokens
 │   ├── popup/
-│   │   ├── popup.html            # Extension toolbar popup interface
-│   │   ├── popup.js              # Active profile switcher & 1-click trigger
-│   │   └── popup.css             # Toolbar popup styling
+│   │   ├── popup.html / popup.css # Extension toolbar popup interface
+│   │   └── popup.ts               # Profile switcher & 1-click trigger
 │   ├── options/
-│   │   ├── options.html          # 5-Tab Settings & Profile Manager dashboard
-│   │   ├── options.js            # Controller for profiles, visual builder, import/export, logs
-│   │   └── options.css           # Dark Slate theme styling
+│   │   ├── options.html / options.css # Dark Slate tabbed dashboard
+│   │   ├── options.ts             # Dashboard initialization & controller orchestrator
+│   │   └── controllers/           # Modular controllers (each <= 200 LOC)
 │   ├── services/
-│   │   ├── crypto.js             # Native Web Crypto API wrapper (AES-256-GCM, PBKDF2)
-│   │   └── storage.js            # Multi-profile & settings storage layer with vault encryption
+│   │   ├── crypto.ts              # Web Crypto API wrapper (AES-256-GCM, PBKDF2)
+│   │   ├── storage/               # Modular storage engine (settings, profiles, logs, vault)
+│   │   └── storage.ts             # Cohesive storage facade
 │   ├── utils/
-│   │   └── importer.js           # Universal JSON parser (handles encrypted, legacy & native formats)
-│   └── icons/
-│       ├── icon.svg              # Scalable master icon vector
-│       ├── icon16.png            # 16x16 icon
-│       ├── icon48.png            # 48x48 icon
-│       └── icon128.png           # 128x128 icon
+│   │   ├── exporter.ts            # Dual-mode backup exporter (encrypted vault vs plaintext)
+│   │   ├── importer.ts            # Universal JSON parser (native & encrypted)
+│   │   └── legacy-importer.ts     # Backward-compatibility parser for legacy extension formats
+│   └── icons/                     # Vector and raster extension icons
 ├── test-forms/
 │   ├── business-directory-form.html  # Australian business directory listing test page
 │   └── quote-request-form.html       # Commercial supplier tender test page
-└── test/
-    ├── test-importer.js          # Unit tests verifying legacy JSON parsing & export fidelity
-    ├── test-pipeline.js          # Unit tests verifying Tier 1 matching & Tier 2 prompt building
-    ├── test-edge-cases.js        # Unit tests verifying dates, times, comboboxes, and security checks
-    ├── test-learning.js          # Unit tests verifying Smart Learning Mode and field guardrails
-    ├── test-multi-provider.js    # Unit & integration tests for Ollama, Claude, OpenAI & Custom Endpoints
-    └── test-encryption.js        # Unit tests for AES-256-GCM vault, PBKDF2, PINs & session caching
+└── test/                          # Automated unit, integration & challenger test suites
+    ├── test-importer.js           # Importer & storage round-trip tests
+    ├── test-pipeline.js           # Tier 1 heuristic matching & Tier 2 prompt building
+    ├── test-edge-cases.js         # Date/time controls, comboboxes, blacklist security
+    ├── test-learning.js           # Smart Learning Mode & security guardrails
+    ├── test-multi-provider.js     # Ollama, Claude, OpenAI & custom HTTP transports
+    ├── test-encryption.js         # AES-256-GCM vault, PBKDF2, PINs & session caching
+    └── test-challenger-*.js       # Empirical adversarial stress tests & IPC dispatch
 ```
 
 ---
 
-## Developer Workflow: Trunk-Based Development
+## Developer Workflow: Commands & Verification
 
-To maintain a healthy, always-deployable codebase:
+All code in this repository adheres to strict automated quality guardrails:
 
-1. **Trunk-Based Branches**: All commits go directly into `main` (trunk) or short-lived feature branches merged immediately upon verification.
-2. **Pre-Commit Verification**: Run the full test suite before committing:
-   ```bash
-   node test/test-importer.js && node test/test-pipeline.js && node test/test-edge-cases.js && node test/test-learning.js && node test/test-multi-provider.js && node test/test-encryption.js
-   ```
-3. **Atomic Commits**: Commit each feature when completed and verified before proceeding to the next feature.
+```bash
+# Compile and bundle the extension into dist/
+npm run build
+
+# Continuous watch mode during development
+npm run watch
+
+# Run strict TypeScript compiler verification (allowJs: false, noEmit)
+npm run type-check
+
+# Run ESLint (enforces <= 200 LOC/file, <= 40 LOC/function, no-unsanitized DOM)
+npm run lint
+
+# Detect orphaned files, unused exports, or stale dependencies
+npm run knip
+
+# Execute all automated core unit test suites
+npm test
+
+# Run empirical adversarial stress and challenger tests
+npm run test:challenger
+
+# Run the complete pre-commit verification pipeline (lint + type-check + knip + test + build)
+npm run verify
+```
+
+> For guidelines, architectural constraints, and rules binding on all human and AI contributors, consult [AGENTS.md](AGENTS.md).
