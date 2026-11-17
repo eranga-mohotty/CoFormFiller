@@ -11,7 +11,7 @@
     "lint": "eslint src/",
     "type-check": "tsc --noEmit",
     "knip": "knip",
-    "test": "node test/test-importer.js && node test/test-pipeline.js && node test/test-edge-cases.js && node test/test-learning.js && node test/test-multi-provider.js && node test/test-encryption.js",
+    "test": "node --import ./test/register-ts.js test/test-importer.js && node --import ./test/register-ts.js test/test-pipeline.js && node --import ./test/register-ts.js test/test-edge-cases.js && node --import ./test/register-ts.js test/test-learning.js && node --import ./test/register-ts.js test/test-multi-provider.js && node --import ./test/register-ts.js test/test-encryption.js",
     "verify": "npm run lint && npm run type-check && npm run knip && npm test && npm run build"
   },
   "keywords": [],

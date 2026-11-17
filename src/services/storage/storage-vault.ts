@@ -18,25 +18,27 @@ import {
   getSessionBackend
 } from './storage-base.js';
 
-export async function getVaultMeta() {
+import type { VaultMeta, VaultData, VaultOperationResult, EncryptedVaultEnvelope } from '../../types/storage.js';
+
+export async function getVaultMeta(): Promise<VaultMeta | null> {
   const storage = getStorageBackend();
-  return new Promise((resolve) => {
+  return new Promise<VaultMeta | null>((resolve) => {
     storage.get([STORAGE_KEYS.VAULT_META], (res) => {
-      resolve(res[STORAGE_KEYS.VAULT_META] || null);
+      resolve((res?.[STORAGE_KEYS.VAULT_META] as VaultMeta | undefined) ?? null);
     });
   });
 }
 
-export async function isVaultEncrypted() {
+export async function isVaultEncrypted(): Promise<boolean> {
   const meta = await getVaultMeta();
   return Boolean(meta && meta.isEncrypted);
 }
 
-function getSessionKey() {
+function getSessionKey(): Promise<CryptoKey | null> {
   const session = getSessionBackend();
-  return new Promise((resolve) => {
+  return new Promise<CryptoKey | null>((resolve) => {
     session.get([SESSION_KEYS.SESSION_KEY], async (res) => {
-      const b64 = res[SESSION_KEYS.SESSION_KEY];
+      const b64 = res?.[SESSION_KEYS.SESSION_KEY] as string | undefined;
       if (!b64) return resolve(null);
       try {
         const key = await importKeyFromBase64(b64);
@@ -48,14 +50,14 @@ function getSessionKey() {
   });
 }
 
-export async function isVaultLocked() {
+export async function isVaultLocked(): Promise<boolean> {
   const encrypted = await isVaultEncrypted();
   if (!encrypted) return false;
   const key = await getSessionKey();
   return key === null;
 }
 
-export async function unlockVault(passphrase) {
+export async function unlockVault(passphrase: string): Promise<VaultOperationResult> {
   const meta = await getVaultMeta();
   if (!meta || !meta.isEncrypted) {
     return { success: true, message: 'Vault is not encrypted.' };
@@ -70,7 +72,7 @@ export async function unlockVault(passphrase) {
 
     const keyB64 = await exportKeyToBase64(key);
     const session = getSessionBackend();
-    await new Promise((resolve) => {
+    await new Promise<boolean>((resolve) => {
       session.set({
         [SESSION_KEYS.SESSION_KEY]: keyB64,
         [SESSION_KEYS.UNLOCKED_AT]: Date.now()
@@ -79,19 +81,19 @@ export async function unlockVault(passphrase) {
 
     return { success: true };
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
-export async function lockVault() {
+export async function lockVault(): Promise<VaultOperationResult> {
   const session = getSessionBackend();
-  await new Promise((resolve) => {
+  await new Promise<boolean>((resolve) => {
     session.remove([SESSION_KEYS.SESSION_KEY, SESSION_KEYS.UNLOCKED_AT], () => resolve(true));
   });
   return { success: true };
 }
 
-export async function readDecryptedVaultData() {
+export async function readDecryptedVaultData(): Promise<VaultData | null> {
   const meta = await getVaultMeta();
   if (!meta || !meta.isEncrypted) return null;
 
@@ -99,14 +101,14 @@ export async function readDecryptedVaultData() {
   if (!key) return null;
 
   const storage = getStorageBackend();
-  return new Promise((resolve) => {
+  return new Promise<VaultData | null>((resolve) => {
     storage.get([STORAGE_KEYS.VAULT_DATA], async (res) => {
-      const envelope = res[STORAGE_KEYS.VAULT_DATA];
+      const envelope = res?.[STORAGE_KEYS.VAULT_DATA] as EncryptedVaultEnvelope | undefined;
       if (!envelope) {
         return resolve({ profiles: [], credentials: {}, logs: [] });
       }
       try {
-        const decrypted = await decryptObject(envelope, key);
+        const decrypted = await decryptObject<VaultData>(envelope, key);
         resolve(decrypted);
       } catch (err) {
         console.error('Decryption of vault data failed:', err);
@@ -116,7 +118,7 @@ export async function readDecryptedVaultData() {
   });
 }
 
-export async function writeEncryptedVaultData(vaultData) {
+export async function writeEncryptedVaultData(vaultData: VaultData): Promise<boolean> {
   const meta = await getVaultMeta();
   if (!meta || !meta.isEncrypted) return true;
 
@@ -127,7 +129,7 @@ export async function writeEncryptedVaultData(vaultData) {
 
   const envelope = await encryptObject(vaultData, key);
   const storage = getStorageBackend();
-  return new Promise((resolve) => {
-    storage.set({ [STORAGE_KEYS.VAULT_DATA]: envelope }, () => resolve(true));
+  return new Promise<boolean>((resolve) => {
+    storage.set({ [STORAGE_KEYS.VAULT_DATA]: envelope as unknown as Record<string, unknown> }, () => resolve(true));
   });
 }

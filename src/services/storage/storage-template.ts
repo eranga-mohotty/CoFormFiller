@@ -2,8 +2,10 @@
  * Default Business Profile Template Generator
  */
 
-function getDefaultOpeningHours() {
-  const weekday = { open: '08:00', close: '17:00', closed: false };
+import type { Profile, BusinessHours, DailyHours } from '../../types/domain.js';
+
+function getDefaultOpeningHours(): BusinessHours {
+  const weekday: DailyHours = { open: '08:00', close: '17:00', closed: false };
   return {
     monday: { ...weekday },
     tuesday: { ...weekday },
@@ -17,7 +19,7 @@ function getDefaultOpeningHours() {
   };
 }
 
-export function generateEmptyProfileTemplate(name = 'New Business Profile') {
+export function generateEmptyProfileTemplate(name: string = 'New Business Profile'): Profile {
   return {
     id: 'prof_' + Date.now().toString(36),
     name,

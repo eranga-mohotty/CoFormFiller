@@ -16,33 +16,36 @@ import {
   writeEncryptedVaultData
 } from './storage-vault.js';
 
-function mergeVaultCredentials(rawSettings, vaultData) {
-  if (vaultData && vaultData.credentials) {
+import type { AppSettings, VaultData } from '../../types/storage.js';
+
+function mergeVaultCredentials(rawSettings: AppSettings, vaultData?: VaultData | null): void {
+  if (vaultData?.credentials) {
     for (const k of SENSITIVE_SETTINGS_KEYS) {
       if (vaultData.credentials[k] !== undefined) {
-        rawSettings[k] = vaultData.credentials[k];
+        rawSettings[k] = vaultData.credentials[k]!;
       }
     }
   }
 }
 
-function maskSensitiveCredentials(settings) {
-  const masked = { ...settings };
+function maskSensitiveCredentials(settings: AppSettings): AppSettings {
+  const masked: AppSettings = { ...settings };
   for (const k of SENSITIVE_SETTINGS_KEYS) {
     masked[k] = '';
   }
   return masked;
 }
 
-export async function getSettings() {
+export async function getSettings(): Promise<AppSettings> {
   const storage = getStorageBackend();
-  const rawSettings = await new Promise((resolve) => {
+  const rawSettings = await new Promise<AppSettings>((resolve) => {
     storage.get([STORAGE_KEYS.SETTINGS], (res) => {
-      resolve({ ...DEFAULT_SETTINGS, ...(res[STORAGE_KEYS.SETTINGS] || {}) });
+      const stored = (res?.[STORAGE_KEYS.SETTINGS] as Partial<AppSettings> | undefined) ?? {};
+      resolve({ ...DEFAULT_SETTINGS, ...stored });
     });
   });
 
-  const validGeminiModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-4-hydrogen'];
+  const validGeminiModels: readonly string[] = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-4-hydrogen'];
   if (!validGeminiModels.includes(rawSettings.geminiModel)) {
     rawSettings.geminiModel = 'gemini-3.1-flash-lite';
   }
@@ -63,16 +66,16 @@ export async function getSettings() {
   return rawSettings;
 }
 
-export async function saveSettings(settings) {
+export async function saveSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
   const storage = getStorageBackend();
   const current = await getSettings();
-  const updated = { ...current, ...settings };
+  const updated: AppSettings = { ...current, ...settings };
 
   const encrypted = await isVaultEncrypted();
   if (encrypted) {
     const isLocked = await isVaultLocked();
     if (!isLocked) {
-      const data = (await readDecryptedVaultData()) || { profiles: [], credentials: {}, logs: [] };
+      const data: VaultData = (await readDecryptedVaultData()) || { profiles: [], credentials: {}, logs: [] };
       if (!data.credentials) data.credentials = {};
       for (const k of SENSITIVE_SETTINGS_KEYS) {
         if (updated[k] !== undefined) data.credentials[k] = updated[k];
@@ -81,12 +84,12 @@ export async function saveSettings(settings) {
     }
 
     const diskSettings = maskSensitiveCredentials(updated);
-    return new Promise((resolve) => {
-      storage.set({ [STORAGE_KEYS.SETTINGS]: diskSettings }, () => resolve(updated));
+    return new Promise<AppSettings>((resolve) => {
+      storage.set({ [STORAGE_KEYS.SETTINGS]: diskSettings as unknown as Record<string, unknown> }, () => resolve(updated));
     });
   }
 
-  return new Promise((resolve) => {
-    storage.set({ [STORAGE_KEYS.SETTINGS]: updated }, () => resolve(updated));
+  return new Promise<AppSettings>((resolve) => {
+    storage.set({ [STORAGE_KEYS.SETTINGS]: updated as unknown as Record<string, unknown> }, () => resolve(updated));
   });
 }
