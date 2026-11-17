@@ -36,6 +36,7 @@ import {
 } from '../src/services/storage.js';
 
 import { exportConfiguration, importConfiguration } from '../src/utils/importer.js';
+import { getStorageBackend, SESSION_KEYS } from '../src/services/storage/storage-base.js';
 
 async function runEncryptionTests() {
   console.log('=== SMARTFORM AI ENCRYPTION & SECURITY TEST SUITE ===\n');
@@ -133,6 +134,23 @@ async function runEncryptionTests() {
   // Verify correct password restores original payload
   const restored = await decryptExportPayload(encryptedExport, 'MySecretPass123');
   assert.deepStrictEqual(restored, exportPayload, 'Restored export must match original payload exactly');
+
+  // Verify malformed export payload rejection (Defect 4 regression)
+  assert.strictEqual(isEncryptedExport({ format: 'smartform-encrypted-vault' }), false);
+  assert.strictEqual(isEncryptedExport({ format: 'smartform-encrypted-vault', kdf: {}, iv: 'iv', ciphertext: 'ct' }), false);
+  assert.strictEqual(isEncryptedExport({ format: 'smartform-encrypted-vault', kdf: { salt: 123 }, iv: 'iv', ciphertext: 'ct' }), false);
+  assert.strictEqual(isEncryptedExport({ format: 'smartform-encrypted-vault', kdf: { salt: 's' }, ciphertext: 'ct' }), false);
+  assert.strictEqual(isEncryptedExport({ format: 'smartform-encrypted-vault', kdf: { salt: 's' }, iv: 'iv' }), false);
+
+  let malformedCaught = false;
+  try {
+    await decryptExportPayload({ format: 'smartform-encrypted-vault' }, 'pass');
+  } catch (err) {
+    malformedCaught = true;
+    assert.strictEqual(err.constructor.name, 'Error');
+    assert.strictEqual(err.message, 'Payload is not an encrypted SmartForm vault.');
+  }
+  assert.strictEqual(malformedCaught, true, 'Malformed payload must throw domain Error, not TypeError');
   console.log('✓ Successfully exported encrypted vault backup and restored with password validation');
 
   console.log('\n--- TEST 7: Passphrase Strength Evaluator ---');
@@ -157,6 +175,16 @@ async function runEncryptionTests() {
   assert.strictEqual(setupRes.success, true);
   assert.strictEqual(await isVaultEncrypted(), true, 'Vault must be marked encrypted');
   assert.strictEqual(await isVaultLocked(), false, 'Vault should be unlocked immediately after setup');
+
+  // 2b. Verify re-encryption overwrite protection throws without erasing vault data (Defect 3 regression)
+  let overwriteAttemptThrew = false;
+  try {
+    await setupVaultEncryption('9999');
+  } catch (err) {
+    overwriteAttemptThrew = true;
+    assert.ok(err.message.includes('already encrypted'), 'Error message must inform caller vault is already encrypted');
+  }
+  assert.strictEqual(overwriteAttemptThrew, true, 'setupVaultEncryption must reject on already encrypted vault');
 
   // 3. Verify disk storage does not contain plaintext profiles or sensitive API keys
   assert.strictEqual(globalThis._mockStorage[STORAGE_KEYS.PROFILES], undefined, 'Plaintext profiles key must be removed from disk');
@@ -193,7 +221,19 @@ async function runEncryptionTests() {
   assert.strictEqual(await isVaultLocked(), false, 'Correct PIN must unlock vault');
   const reUnlockedProfiles = await getProfiles();
   assert.strictEqual(reUnlockedProfiles[0].name, 'Alpha Cleaning');
-  console.log('✓ PIN authentication verified correctly with session caching');
+
+  // 7b. Test Auto-Lock Expiration Enforcement (Defect 2 regression)
+  globalThis._mockStorage[STORAGE_KEYS.VAULT_META].autoLockMinutes = 5;
+  assert.strictEqual(await isVaultLocked(), false);
+  // Fast forward past 5-minute timeout (60 minutes ago)
+  globalThis._mockSessionStorage[SESSION_KEYS.UNLOCKED_AT] = Date.now() - (60 * 60 * 1000);
+  assert.strictEqual(await isVaultLocked(), true, 'Vault must auto-lock after expiration timeout');
+  assert.strictEqual(globalThis._mockSessionStorage[SESSION_KEYS.SESSION_KEY], undefined, 'Session key must be cleared on auto-lock');
+  // Re-unlock and disable auto-lock timeout for subsequent steps
+  await unlockVault('4321');
+  globalThis._mockStorage[STORAGE_KEYS.VAULT_META].autoLockMinutes = 0;
+  assert.strictEqual(await isVaultLocked(), false);
+  console.log('✓ PIN authentication verified correctly with session caching and auto-lock enforcement');
 
   // 8. Test Dual-Mode Export & Encrypted Import
   const encExport = await exportConfiguration({ includeApiKey: true, encrypt: true, passphrase: '4321' });
@@ -235,6 +275,19 @@ async function runEncryptionTests() {
   assert.ok(globalThis._mockStorage[STORAGE_KEYS.PROFILES], 'Plaintext profiles restored on disk');
   assert.strictEqual(globalThis._mockStorage[STORAGE_KEYS.SETTINGS].geminiApiKey, 'AIzaSyPlaintextKey123');
   console.log('✓ Disabled vault encryption cleanly restored plaintext storage');
+
+  console.log('\n--- TEST 11: In-Memory Storage Backend Clear Synchronization ---');
+  const s1 = getStorageBackend();
+  await s1.set({ test_clear_key: 'active_value' });
+  await s1.clear();
+  const readCleared = await s1.get(['test_clear_key']);
+  assert.strictEqual(Object.keys(readCleared).length, 0, 's1 must see empty data after clear');
+  await s1.set({ test_sync_key: 'sync_value' });
+  const s2 = getStorageBackend();
+  const readS2 = await s2.get(['test_sync_key']);
+  assert.strictEqual(readS2.test_sync_key, 'sync_value', 'Subsequent backend instances must share storage');
+  await s1.clear();
+  console.log('✓ In-memory storage clear preserves object reference and synchronizes callers');
 
   console.log('\n✅ All Encryption & Security Unit Tests Passed Successfully!');
 }

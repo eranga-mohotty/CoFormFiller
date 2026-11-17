@@ -170,9 +170,12 @@ export interface ImportResult {
 export function isEncryptedExport(obj: unknown): obj is EncryptedExportPayload {
   if (typeof obj !== 'object' || obj === null) return false;
   const target = obj as Record<string, unknown>;
+  const kdf = target.kdf as Record<string, unknown> | undefined;
   return (
-    target.format === 'smartform-encrypted-vault' ||
-    Boolean(target.kdf && target.ciphertext && target.iv)
+    (target.format === 'smartform-encrypted-vault' || Boolean(target.kdf)) &&
+    typeof kdf?.salt === 'string' &&
+    typeof target.iv === 'string' &&
+    typeof target.ciphertext === 'string'
   );
 }
 

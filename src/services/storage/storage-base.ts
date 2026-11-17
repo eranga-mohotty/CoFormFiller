@@ -115,7 +115,7 @@ function createMemoryStorage(globalKey: string): StorageBackend {
       return Promise.resolve();
     },
     clear: (callback) => {
-      globalStore[globalKey] = {};
+      for (const k of Object.keys(storage)) delete storage[k];
       if (callback) callback();
       return Promise.resolve();
     }

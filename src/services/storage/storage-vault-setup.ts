@@ -55,11 +55,32 @@ function extractSensitiveCredentials(settings: AppSettings): { credentials: Reco
   return { credentials, sanitized };
 }
 
+async function persistEncryptedVault(
+  storage: StorageBackend,
+  vaultMeta: VaultMeta,
+  encryptedEnvelope: EncryptedVaultEnvelope,
+  sanitized: AppSettings
+): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    storage.set({
+      [STORAGE_KEYS.VAULT_META]: vaultMeta as unknown as Record<string, unknown>,
+      [STORAGE_KEYS.VAULT_DATA]: encryptedEnvelope as unknown as Record<string, unknown>,
+      [STORAGE_KEYS.SETTINGS]: sanitized as unknown as Record<string, unknown>
+    }, () => {
+      storage.remove([STORAGE_KEYS.PROFILES, STORAGE_KEYS.LOGS], () => resolve(true));
+    });
+  });
+}
+
 export async function setupVaultEncryption(
   passphrase: string,
   { autoLockMinutes = 0 }: { autoLockMinutes?: number } = {}
 ): Promise<VaultOperationResult> {
   if (!passphrase) throw new Error('Passphrase or PIN cannot be empty.');
+  const meta = await getVaultMeta();
+  if (meta?.isEncrypted) {
+    throw new Error('Vault is already encrypted. Use changeVaultPassphrase to update credentials or disable encryption first.');
+  }
 
   const storage = getStorageBackend();
   const [profiles, activeProfileId, settings, logs] = await fetchPlaintextStorageData(storage);
@@ -80,16 +101,7 @@ export async function setupVaultEncryption(
     createdAt: Date.now()
   };
 
-  await new Promise<boolean>((resolve) => {
-    storage.set({
-      [STORAGE_KEYS.VAULT_META]: vaultMeta as unknown as Record<string, unknown>,
-      [STORAGE_KEYS.VAULT_DATA]: encryptedEnvelope as unknown as Record<string, unknown>,
-      [STORAGE_KEYS.SETTINGS]: sanitized as unknown as Record<string, unknown>
-    }, () => {
-      storage.remove([STORAGE_KEYS.PROFILES, STORAGE_KEYS.LOGS], () => resolve(true));
-    });
-  });
-
+  await persistEncryptedVault(storage, vaultMeta, encryptedEnvelope, sanitized);
   await cacheSessionKey(key);
   return { success: true };
 }

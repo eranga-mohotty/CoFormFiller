@@ -37,9 +37,22 @@ export async function isVaultEncrypted(): Promise<boolean> {
 function getSessionKey(): Promise<CryptoKey | null> {
   const session = getSessionBackend();
   return new Promise<CryptoKey | null>((resolve) => {
-    session.get([SESSION_KEYS.SESSION_KEY], async (res) => {
+    session.get([SESSION_KEYS.SESSION_KEY, SESSION_KEYS.UNLOCKED_AT], async (res) => {
       const b64 = res?.[SESSION_KEYS.SESSION_KEY] as string | undefined;
       if (!b64) return resolve(null);
+
+      const unlockedAt = res?.[SESSION_KEYS.UNLOCKED_AT] as number | undefined;
+      if (unlockedAt) {
+        const meta = await getVaultMeta();
+        if (meta?.autoLockMinutes && meta.autoLockMinutes > 0) {
+          const timeoutMs = meta.autoLockMinutes * 60 * 1000;
+          if (Date.now() - unlockedAt > timeoutMs) {
+            await lockVault();
+            return resolve(null);
+          }
+        }
+      }
+
       try {
         const key = await importKeyFromBase64(b64);
         resolve(key);
