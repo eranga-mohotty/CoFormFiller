@@ -4,7 +4,7 @@
  * Response Parsers, Schema Path Resolvers, and Whitelist Validation.
  */
 
-import assert from 'node:assert';
+import assert from 'node:assert/strict';
 import {
   parseJsonFills,
   extractOpenAiOrOllamaText,
@@ -15,8 +15,6 @@ import {
   callCustomEndpointApi,
   callAiProvider,
   testAiConnection,
-  buildPromptPayload,
-  validateAiFills,
   getExtensionOrigin
 } from '../src/engine/ai-agent.js';
 

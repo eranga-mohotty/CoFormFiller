@@ -3,11 +3,15 @@
  * Tests Tier 1 Pattern Matcher and Tier 2 AI Agent Prompt Builder
  */
 
+import assert from 'node:assert/strict';
 import { runPatternMatcher } from '../src/engine/pattern-matcher.js';
 import { buildPromptPayload, validateAiFills, extractInteractionText } from '../src/engine/ai-agent.js';
 
 const mockProfile = {
+  id: 'profile_acme_commercial',
   name: 'Acme Commercial Profile',
+  createdAt: 1700000000000,
+  updatedAt: 1700000000000,
   data: {
     businessName: 'Acme Commercial',
     tradingName: 'Acme Services',
@@ -34,6 +38,9 @@ const mockProfile = {
     ],
     openingHours: {
       monday: { open: '07:00', close: '18:00', closed: false },
+      tuesday: { open: '07:00', close: '18:00', closed: false },
+      wednesday: { open: '07:00', close: '18:00', closed: false },
+      thursday: { open: '07:00', close: '18:00', closed: false },
       friday: { open: '07:00', close: '18:00', closed: false },
       saturday: { open: '08:00', close: '16:00', closed: false },
       sunday: { open: '', close: '', closed: false, onCall24_7: true },
@@ -48,7 +55,8 @@ const mockProfile = {
         q: 'What commercial cleaning services do you provide?',
         a: 'We provide tailored commercial cleaning solutions across metropolitan areas.'
       }
-    ]
+    ],
+    customFields: []
   }
 };
 
@@ -60,7 +68,8 @@ const mockScannedFields = [
       tag: 'input',
       type: 'email',
       name: 'contact_email',
-      label: 'Business Email Address *'
+      label: 'Business Email Address *',
+      currentValue: ''
     }
   },
   // 2. Obvious phone (Tier 1)
@@ -70,7 +79,8 @@ const mockScannedFields = [
       tag: 'input',
       type: 'tel',
       name: 'contact_phone',
-      label: 'Business Phone Number'
+      label: 'Business Phone Number',
+      currentValue: ''
     }
   },
   // 3. Obvious business name (Tier 1)
@@ -80,7 +90,8 @@ const mockScannedFields = [
       tag: 'input',
       type: 'text',
       name: 'company_name',
-      label: 'Company / Business Name *'
+      label: 'Company / Business Name *',
+      currentValue: ''
     }
   },
   // 4. Obvious suburb (Tier 1)
@@ -90,7 +101,8 @@ const mockScannedFields = [
       tag: 'input',
       type: 'text',
       name: 'suburb',
-      label: 'City / Suburb'
+      label: 'City / Suburb',
+      currentValue: ''
     }
   },
   // 5. State dropdown (Tier 2 - requires semantic select matching)
@@ -106,7 +118,8 @@ const mockScannedFields = [
         { value: 'VIC', text: 'Victoria (VIC)' },
         { value: 'WA', text: 'Western Australia (WA)' },
         { value: 'SA', text: 'South Australia (SA)' }
-      ]
+      ],
+      currentValue: ''
     }
   },
   // 6. Monday open time dropdown (Tier 2)
@@ -122,7 +135,8 @@ const mockScannedFields = [
         { value: '06:00', text: '6:00 AM' },
         { value: '07:00', text: '7:00 AM' },
         { value: '08:00', text: '8:00 AM' }
-      ]
+      ],
+      currentValue: ''
     }
   },
   // 7. Service checkbox: Office Cleaning (Tier 2)
@@ -133,7 +147,8 @@ const mockScannedFields = [
       type: 'checkbox',
       name: 'services',
       label: 'Office & Workplace Cleaning',
-      valueAttr: 'office_cleaning'
+      valueAttr: 'office_cleaning',
+      currentValue: false
     }
   },
   // 8. Service checkbox: Pet Grooming (Tier 2 - negative test)
@@ -144,7 +159,8 @@ const mockScannedFields = [
       type: 'checkbox',
       name: 'services',
       label: 'Pet Grooming & Washing',
-      valueAttr: 'pet_grooming'
+      valueAttr: 'pet_grooming',
+      currentValue: false
     }
   },
   // 9. Short Summary with character limit (Tier 2)
@@ -155,7 +171,8 @@ const mockScannedFields = [
       type: 'text',
       name: 'short_summary',
       label: 'Short Summary / Tagline (Max 120 Characters)',
-      maxLength: 120
+      maxLength: 120,
+      currentValue: ''
     }
   },
   // 10. FAQ textarea (Tier 2)
@@ -165,7 +182,8 @@ const mockScannedFields = [
       tag: 'textarea',
       type: 'textarea',
       name: 'custom_faq',
-      label: 'What commercial cleaning services do you provide in Perth?'
+      label: 'What commercial cleaning services do you provide in Perth?',
+      currentValue: ''
     }
   }
 ];
@@ -181,34 +199,44 @@ async function runPipelineTests() {
 
   console.log(`Remaining ${remainingFields.length} fields escalated to Tier 2.`);
 
-  if (matchedFills.length !== 4) {
-    throw new Error(`Expected 4 Tier 1 matches, got ${matchedFills.length}`);
-  }
+  assert.strictEqual(matchedFills.length, 4, `Expected 4 Tier 1 matches, got ${matchedFills.length}`);
 
   const emailMatch = matchedFills.find((m) => m.matchedCategory === 'email');
-  if (emailMatch.value !== 'contact@acmecommercialdemo.com') {
-    throw new Error('Email value mismatch');
-  }
+  assert.ok(emailMatch, 'Email match not found');
+  assert.strictEqual(emailMatch.value, 'contact@acmecommercialdemo.com', 'Email value mismatch');
 
   const companyMatch = matchedFills.find((m) => m.matchedCategory === 'businessName');
-  if (companyMatch.value !== 'Acme Commercial') {
-    throw new Error('Company name value mismatch');
-  }
+  assert.ok(companyMatch, 'Company match not found');
+  assert.strictEqual(companyMatch.value, 'Acme Commercial', 'Company name value mismatch');
+
+  const phoneMatch = matchedFills.find((m) => m.matchedCategory === 'phone');
+  assert.ok(phoneMatch, 'Phone match not found');
+  assert.strictEqual(phoneMatch.value, '+61400111222', 'Phone value mismatch');
+
+  const cityMatch = matchedFills.find((m) => m.matchedCategory === 'city');
+  assert.ok(cityMatch, 'City match not found');
+  assert.strictEqual(cityMatch.value, 'Perth', 'City value mismatch');
+
+  console.log('✓ Matched email, businessName, phone, and city in Tier 1');
+
+  console.log('\n--- TEST 1B: Edge Cases for Pattern Matcher ---');
+  const emptyResult = runPatternMatcher([], null);
+  assert.strictEqual(emptyResult.matchedFills.length, 0, 'Expected 0 matched fills for empty fields with null profile');
+  assert.strictEqual(emptyResult.remainingFields.length, 0, 'Expected 0 remaining fields for empty fields with null profile');
+
+  const nullProfileResult = runPatternMatcher(mockScannedFields, null);
+  assert.strictEqual(nullProfileResult.matchedFills.length, 0, 'Expected 0 matched fills for null profile');
+  assert.strictEqual(nullProfileResult.remainingFields.length, mockScannedFields.length, 'Expected all fields returned in remainingFields when profile is null');
+  console.log('✓ Handled empty fields and null profile gracefully without throwing');
 
   console.log('\n--- TEST 2: Tier 2 AI Agent Prompt Construction ---');
   const payload = buildPromptPayload(remainingFields, mockProfile, {
     customPromptInstructions: 'Prefer Australian English spelling.'
   });
 
-  if (!payload.systemInstruction.includes('Acme Commercial')) {
-    throw new Error('System instruction does not include profile knowledge');
-  }
-  if (!payload.systemInstruction.includes('Prefer Australian English spelling.')) {
-    throw new Error('Custom instructions missing from prompt');
-  }
-  if (payload.simplifiedFields.length !== 6) {
-    throw new Error(`Expected 6 simplified fields in Tier 2 payload, got ${payload.simplifiedFields.length}`);
-  }
+  assert.ok(payload.systemInstruction.includes('Acme Commercial'), 'System instruction does not include profile knowledge');
+  assert.ok(payload.systemInstruction.includes('Prefer Australian English spelling.'), 'Custom instructions missing from prompt');
+  assert.strictEqual(payload.simplifiedFields.length, 6, `Expected 6 simplified fields in Tier 2 payload, got ${payload.simplifiedFields.length}`);
 
   console.log('Prompt built cleanly with JSON schema instruction.');
   console.log('Sample simplified field for AI:\n', JSON.stringify(payload.simplifiedFields[0], null, 2));
@@ -259,9 +287,12 @@ async function runPipelineTests() {
   const petCheck = parsed.fills.find((f) => f.uid === 'field_service_pet');
   const stateSelect = parsed.fills.find((f) => f.uid === 'field_state');
 
-  if (officeCheck.checked !== true) throw new Error('Office cleaning should be checked');
-  if (petCheck.checked !== false) throw new Error('Pet grooming should NOT be checked');
-  if (stateSelect.value !== 'WA') throw new Error('State dropdown should be WA');
+  assert.ok(officeCheck, 'field_service_office fill not found');
+  assert.strictEqual(officeCheck.checked, true, 'Office cleaning should be checked');
+  assert.ok(petCheck, 'field_service_pet fill not found');
+  assert.strictEqual(petCheck.checked, false, 'Pet grooming should NOT be checked');
+  assert.ok(stateSelect, 'field_state fill not found');
+  assert.strictEqual(stateSelect.value, 'WA', 'State dropdown should be WA');
 
   console.log('\n--- TEST 4: Strict AI Response Schema & Whitelist Validation ---');
   const allowedUids = ['field_state', 'field_mon_open', 'field_short_desc'];
@@ -273,18 +304,12 @@ async function runPipelineTests() {
   ];
 
   const validated = validateAiFills(testFills, allowedUids);
-  if (validated.length !== 2) {
-    throw new Error(`Expected 2 validated fills, got ${validated.length}`);
-  }
-  if (validated[0].uid !== 'field_state' || validated[0].value !== 'WA') {
-    throw new Error('Expected first entry to be field_state=WA');
-  }
-  if (validated[1].uid !== 'field_short_desc') {
-    throw new Error('Expected second entry to be field_short_desc');
-  }
-  if (validated[1].value.length !== 5000) {
-    throw new Error(`Expected oversized value to be capped at 5000 chars, got ${validated[1].value.length}`);
-  }
+  assert.strictEqual(validated.length, 2, `Expected 2 validated fills, got ${validated.length}`);
+  assert.strictEqual(validated[0].uid, 'field_state', 'Expected first entry to be field_state');
+  assert.strictEqual(validated[0].value, 'WA', 'Expected field_state value to be WA');
+  assert.strictEqual(validated[1].uid, 'field_short_desc', 'Expected second entry to be field_short_desc');
+  assert.strictEqual(validated[1].value.length, 5000, `Expected oversized value to be capped at 5000 chars, got ${validated[1].value.length}`);
+
   console.log('✓ Rejected hallucinated field UIDs');
   console.log('✓ Deduplicated duplicate fill instructions');
   console.log('✓ Enforced maximum character length cap on text values');
@@ -305,9 +330,7 @@ async function runPipelineTests() {
     ]
   };
   const extractedText1 = extractInteractionText(mockInteractionsStepsResponse);
-  if (!extractedText1.includes('Test Value')) {
-    throw new Error('Failed to extract text from steps response');
-  }
+  assert.ok(extractedText1.includes('Test Value'), 'Failed to extract text from steps response');
 
   // 2. Outputs format
   const mockInteractionsOutputsResponse = {
@@ -320,9 +343,7 @@ async function runPipelineTests() {
     ]
   };
   const extractedText2 = extractInteractionText(mockInteractionsOutputsResponse);
-  if (!extractedText2.includes('Output Value')) {
-    throw new Error('Failed to extract text from outputs response');
-  }
+  assert.ok(extractedText2.includes('Output Value'), 'Failed to extract text from outputs response');
 
   // 3. Exact live Gemini 3.1 flash lite structure (steps[].content array of {text, type})
   const mockLiveGeminiResponse = {
@@ -345,9 +366,7 @@ async function runPipelineTests() {
     ]
   };
   const extractedText3 = extractInteractionText(mockLiveGeminiResponse);
-  if (!extractedText3.includes('NSW')) {
-    throw new Error('Failed to extract text from live Gemini 3.1 flash steps[].content array response');
-  }
+  assert.ok(extractedText3.includes('NSW'), 'Failed to extract text from live Gemini 3.1 flash steps[].content array response');
 
   console.log('✓ Extracted text from standard Interactions API steps payload');
   console.log('✓ Extracted text from alternate outputs payload');

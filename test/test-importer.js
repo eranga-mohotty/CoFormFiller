@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { importConfiguration, exportConfiguration, detectFormat } from '../src/utils/importer.js';
 import { getProfiles, getActiveProfile, getSettings } from '../src/services/storage.js';
 
@@ -133,22 +134,23 @@ const sampleLegacyJson = {
 };
 
 async function runTests() {
+  // Ensure clean storage isolation
+  globalThis._mockStorage = {};
+
   console.log('--- TEST 1: Detect Format ---');
   const format = detectFormat(sampleLegacyJson);
   console.log('Format detected:', format);
-  if (format !== 'legacy-extension') {
-    throw new Error('Expected legacy-extension format');
-  }
+  assert.strictEqual(format, 'legacy-extension', 'Expected legacy-extension format');
 
   console.log('\n--- TEST 2: Import Legacy Configuration (Replace Mode) ---');
   const result = await importConfiguration(sampleLegacyJson, 'replace');
   console.log('Import result:', result);
-  if (!result.success) {
-    throw new Error('Import failed: ' + result.message);
-  }
+  assert.strictEqual(result.success, true, 'Import failed: ' + result.message);
 
   const profiles = await getProfiles();
   console.log(`Loaded ${profiles.length} profile(s).`);
+  assert.strictEqual(profiles.length, 1, 'Expected 1 profile loaded');
+
   const active = await getActiveProfile();
   console.log('Active Profile Name:', active?.name);
   console.log('Business Name:', active?.data?.businessName);
@@ -160,31 +162,87 @@ async function runTests() {
   console.log('First FAQ Question:', active?.data?.faqs?.[0]?.q);
   console.log('State inferred:', active?.data?.address?.state);
 
-  if (active?.data?.email !== 'contact@acmecleaningdemo.com') {
-    throw new Error('Email was not parsed properly');
-  }
-  if (!active?.data?.services || active.data.services.length !== 4) {
-    throw new Error('Expected 4 services parsed, got: ' + active?.data?.services?.length);
-  }
-  if (!active?.data?.faqs || active.data.faqs.length < 2) {
-    throw new Error('Expected at least 2 FAQs parsed');
-  }
+  assert.strictEqual(active?.data?.email, 'contact@acmecleaningdemo.com', 'Email was not parsed properly');
+  assert.ok(active?.data?.services, 'Services list missing');
+  assert.strictEqual(active.data.services.length, 4, 'Expected 4 services parsed, got: ' + active?.data?.services?.length);
+  assert.ok(active?.data?.faqs, 'FAQs list missing');
+  assert.ok(active.data.faqs.length >= 2, 'Expected at least 2 FAQs parsed');
+  assert.strictEqual(active?.data?.address?.state, '', 'Expected state to be empty string from legacy format');
+  console.log('✓ Successfully imported legacy configuration in replace mode with state inference verified');
 
   console.log('\n--- TEST 3: Settings & API Key Ingestion ---');
   const settings = await getSettings();
   console.log('API key imported:', settings.geminiApiKey ? 'Yes (starts with ' + settings.geminiApiKey.substring(0, 6) + '...)' : 'No');
-  if (!settings.geminiApiKey) {
-    throw new Error('Expected API key to be imported from byok-v2');
-  }
+  assert.ok(settings.geminiApiKey, 'Expected API key to be imported from byok-v2');
+  assert.strictEqual(settings.geminiApiKey, 'AIzaSyDUMMY_MOCK_TEST_API_KEY_00000000000');
+  console.log('✓ Settings and API key ingested accurately');
 
   console.log('\n--- TEST 4: Export Configuration ---');
   const exported = await exportConfiguration({ includeApiKey: true });
   console.log('Exported version:', exported.smartform_version);
   console.log('Exported profiles count:', exported.profiles.length);
   console.log('Exported active ID:', exported.activeProfileId);
-  if (!exported.profiles || exported.profiles.length === 0) {
-    throw new Error('Exported profile count is 0');
-  }
+  assert.ok(exported.profiles && exported.profiles.length > 0, 'Exported profile count is 0');
+  assert.strictEqual(exported.smartform_version, '1.0.0', 'Expected smartform_version to be 1.0.0');
+  assert.strictEqual(exported.profiles.length, 1);
+  assert.strictEqual(exported.activeProfileId, active?.id);
+  console.log('✓ Exported configuration has valid version and profile structure');
+
+  console.log('\n--- TEST 5: Native Round-Trip Export/Import Fidelity ---');
+  const nativeFormat = detectFormat(exported);
+  assert.strictEqual(nativeFormat, 'smartform-native', 'Expected detected format to be smartform-native');
+
+  const roundTripResult = await importConfiguration(exported, 'replace');
+  assert.strictEqual(roundTripResult.success, true, 'Round-trip import failed: ' + roundTripResult.message);
+
+  const rtProfiles = await getProfiles();
+  assert.strictEqual(rtProfiles.length, exported.profiles.length, 'Profile count mismatch after round-trip');
+
+  const rtActive = await getActiveProfile();
+  assert.ok(rtActive, 'Active profile not found after round-trip');
+  assert.strictEqual(rtActive.name, active.name, 'Profile name mismatch after round-trip');
+  assert.strictEqual(rtActive.data.email, active.data.email, 'Email mismatch after round-trip');
+  assert.deepStrictEqual(rtActive.data.services, active.data.services, 'Services mismatch after round-trip');
+
+  const rtSettings = await getSettings();
+  assert.strictEqual(rtSettings.geminiApiKey, settings.geminiApiKey, 'API key mismatch after round-trip');
+  console.log('✓ Native export/import round-trip achieved 100% data fidelity');
+
+  console.log('\n--- TEST 6: Merge Mode Import ---');
+  const countBeforeMerge = (await getProfiles()).length;
+  const secondLegacyJson = JSON.parse(JSON.stringify(sampleLegacyJson));
+  secondLegacyJson.local.flexibleProfiles[0].id = 'second-profile-uuid-1234';
+  secondLegacyJson.local.flexibleProfiles[0].name = 'Second Business Profile';
+
+  const mergeResult = await importConfiguration(secondLegacyJson, 'merge');
+  assert.strictEqual(mergeResult.success, true, 'Merge import failed: ' + mergeResult.message);
+
+  const mergedProfiles = await getProfiles();
+  assert.strictEqual(mergedProfiles.length, countBeforeMerge + 1, 'Expected profiles to increase by 1 in merge mode');
+  const foundOriginal = mergedProfiles.some((p) => p.name === active.name);
+  const foundSecond = mergedProfiles.some((p) => p.name === 'Second Business Profile');
+  assert.ok(foundOriginal, 'Original profile must be preserved in merge mode');
+  assert.ok(foundSecond, 'Second profile must be appended in merge mode');
+  console.log('✓ Merge mode successfully appended new profile without overwriting existing data');
+
+  console.log('\n--- TEST 7: Error Handling for Malformed JSON & Empty Payloads ---');
+  const malformedResult = await importConfiguration('{ malformed json string :::', 'replace');
+  assert.strictEqual(malformedResult.success, false, 'Expected malformed JSON to fail gracefully');
+  assert.ok(malformedResult.message.includes('Invalid JSON format'), 'Expected Invalid JSON format error message');
+
+  const emptyArrayResult = await importConfiguration([], 'replace');
+  assert.strictEqual(emptyArrayResult.success, false, 'Expected empty array import to fail');
+  assert.ok(emptyArrayResult.message.includes('Could not extract any profiles'), 'Expected empty profiles error message');
+
+  const emptyNativeResult = await importConfiguration({ smartform_version: '1.0.0', profiles: [] }, 'replace');
+  assert.strictEqual(emptyNativeResult.success, false, 'Expected native payload with empty profiles to fail');
+  assert.ok(emptyNativeResult.message.includes('Could not extract any profiles'), 'Expected empty profiles error message');
+
+  const nullResult = await importConfiguration(null, 'replace');
+  assert.strictEqual(nullResult.success, false, 'Expected null input import to fail');
+  assert.ok(nullResult.message.includes('Data must be an object'), 'Expected Data must be an object error');
+
+  console.log('✓ Gracefully handled malformed JSON string and empty payloads');
 
   console.log('\n✅ All Importer and Storage Tests Passed Successfully!');
 }

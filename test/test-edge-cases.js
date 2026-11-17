@@ -4,7 +4,7 @@
  * 2. Time normalization (HH:MM 24h for HTML5 time inputs)
  */
 
-import assert from 'assert';
+import assert from 'node:assert/strict';
 import { normalizeDateValue, normalizeTimeValue, setNativeValue } from '../src/content/inserter.js';
 import { scanFormFields, collectFormElements } from '../src/engine/scanner.js';
 
@@ -21,9 +21,7 @@ function runEdgeCaseTests() {
   for (const c of dateCases) {
     const res = normalizeDateValue(c.input);
     console.log(`  "${c.input}" -> "${res}" (expected "${c.expected}")`);
-    if (res !== c.expected) {
-      throw new Error(`Date normalization failed for ${c.input}: got ${res}`);
-    }
+    assert.strictEqual(res, c.expected, `Date normalization failed for ${c.input}`);
   }
 
   console.log('\n--- TEST 2: Time Normalization ---');
@@ -40,9 +38,7 @@ function runEdgeCaseTests() {
   for (const c of timeCases) {
     const res = normalizeTimeValue(c.input);
     console.log(`  "${c.input}" -> "${res}" (expected "${c.expected}")`);
-    if (res !== c.expected) {
-      throw new Error(`Time normalization failed for ${c.input}: got ${res}`);
-    }
+    assert.strictEqual(res, c.expected, `Time normalization failed for ${c.input}`);
   }
 
   console.log('\n--- TEST 3: Visible Label Sensitive Field Guardrail ---');

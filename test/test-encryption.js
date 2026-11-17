@@ -4,7 +4,7 @@
  * short PIN support, tamper rejection, and export payload round-trips.
  */
 
-import assert from 'assert';
+import assert from 'node:assert/strict';
 import {
   generateSalt,
   deriveKeyFromPassphrase,

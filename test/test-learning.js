@@ -1,12 +1,10 @@
-import assert from 'assert';
+import assert from 'node:assert/strict';
 import {
   saveLearnedFieldToActiveProfile,
   createProfile,
-  getActiveProfile,
-  saveProfiles,
-  setActiveProfileId
+  getActiveProfile
 } from '../src/services/storage.js';
-import { isLearnableField, isSensitiveField } from '../src/engine/scanner.js';
+import { isLearnableField } from '../src/engine/scanner.js';
 
 console.log('--- TEST 1: Storage saveLearnedFieldToActiveProfile ---');
 
