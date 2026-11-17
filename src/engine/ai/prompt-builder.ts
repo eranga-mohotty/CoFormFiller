@@ -1,43 +1,20 @@
 /**
  * AI Prompt Builder - Serializes DOM fields and profile context into LLM prompts
+ * Pure Web Platform APIs with zero runtime dependencies.
  */
 
-function simplifyField(item) {
-  const f = item.info || item;
-  const clean = {
-    uid: f.uid,
-    tag: f.tag,
-    type: f.type,
-    label: f.label,
-    groupContext: f.groupContext || undefined,
-    placeholder: f.placeholder || undefined,
-    required: f.required || undefined,
-    maxLength: f.maxLength || undefined
-  };
+import type {
+  FieldMetadata,
+  ScannedFormField,
+  ScannedElementEntry,
+  ScannedFieldOption,
+  AiPromptPayload,
+  AiRequestOptions,
+  Profile,
+  CompanyProfile
+} from '../../types/index.js';
 
-  if (f.options && f.options.length > 0) {
-    clean.options = f.options.map((o) => ({ value: o.value, text: o.text }));
-  }
-  if (f.radioGroup && f.radioGroup.options) {
-    clean.radioOptions = f.radioGroup.options.map((o) => ({ value: o.value, text: o.text }));
-  }
-  if (f.valueAttr) {
-    clean.valueAttr = f.valueAttr;
-  }
-
-  return clean;
-}
-
-function buildSystemInstruction(profile, settings = {}) {
-  const customInstructions = settings.customPromptInstructions ? `\nUSER CUSTOM INSTRUCTIONS:\n${settings.customPromptInstructions}\n` : '';
-
-  return `You are SmartForm AI, an intelligent executive assistant and form-filling agent.
-Your objective is to examine the provided Web Form Fields and fill them using the Profile Knowledge Base provided.
-
-PROFILE KNOWLEDGE BASE:
-${JSON.stringify(profile.data || profile, null, 2)}
-${customInstructions}
-FORM FILLING RULES:
+const SYSTEM_INSTRUCTION_RULES = `FORM FILLING RULES:
 1. BUSINESS DESCRIPTIONS & TEXTAREAS:
    - Check 'maxLength'. If a limit is specified (e.g. 150 chars), craft a concise, natural summary that fits within the limit without getting cut off mid-sentence.
    - For unrestricted textareas, provide the complete, detailed description from the profile.
@@ -70,9 +47,73 @@ You MUST respond with ONLY a valid JSON object (no markdown, no explanation, no 
     }
   ]
 }`;
+
+interface MutableSimplifiedField {
+  uid: string;
+  tag: string;
+  type: string;
+  label: string;
+  groupContext?: string;
+  placeholder?: string;
+  required?: boolean;
+  maxLength?: number | null;
+  options?: readonly ScannedFieldOption[];
+  radioOptions?: readonly ScannedFieldOption[];
+  valueAttr?: string;
 }
 
-export function buildPromptPayload(fields, profile, settings = {}) {
+export type ScannedPromptFieldInput = ScannedElementEntry | ScannedFormField | FieldMetadata;
+
+function simplifyField(item: ScannedPromptFieldInput): FieldMetadata {
+  const f = ('info' in item && item.info ? item.info : item) as ScannedFormField;
+  const clean: MutableSimplifiedField = {
+    uid: f.uid,
+    tag: f.tag,
+    type: f.type,
+    label: f.label,
+    groupContext: f.groupContext || undefined,
+    placeholder: f.placeholder || undefined,
+    required: f.required || undefined,
+    maxLength: f.maxLength != null && f.maxLength > 0 ? f.maxLength : undefined
+  };
+
+  if (f.options && f.options.length > 0) {
+    clean.options = f.options.map((o) => ({ value: o.value, text: o.text }));
+  }
+  const radioOptions = f.radioGroup?.options || f.radioOptions;
+  if (radioOptions && radioOptions.length > 0) {
+    clean.radioOptions = radioOptions.map((o) => ({ value: o.value, text: o.text }));
+  }
+  if (f.valueAttr) {
+    clean.valueAttr = f.valueAttr;
+  }
+
+  return clean as FieldMetadata;
+}
+
+function buildSystemInstruction(
+  profile: Profile | CompanyProfile | Record<string, unknown>,
+  settings: AiRequestOptions = {}
+): string {
+  const customInstructions = settings.customPromptInstructions
+    ? `\nUSER CUSTOM INSTRUCTIONS:\n${settings.customPromptInstructions}\n`
+    : '';
+  const profileData = ('data' in profile && profile.data ? profile.data : profile) ?? {};
+
+  return `You are SmartForm AI, an intelligent executive assistant and form-filling agent.
+Your objective is to examine the provided Web Form Fields and fill them using the Profile Knowledge Base provided.
+
+PROFILE KNOWLEDGE BASE:
+${JSON.stringify(profileData, null, 2)}
+${customInstructions}
+${SYSTEM_INSTRUCTION_RULES}`;
+}
+
+export function buildPromptPayload(
+  fields: readonly ScannedPromptFieldInput[],
+  profile: Profile | CompanyProfile | Record<string, unknown>,
+  settings: AiRequestOptions = {}
+): AiPromptPayload {
   const systemInstruction = buildSystemInstruction(profile, settings);
   const simplifiedFields = fields.map(simplifyField);
   const userPrompt = `Please determine the optimal values for the following ${simplifiedFields.length} form field(s):\n${JSON.stringify(simplifiedFields, null, 2)}`;

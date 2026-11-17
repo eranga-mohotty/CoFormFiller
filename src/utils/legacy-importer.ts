@@ -1,8 +1,46 @@
 /**
  * Legacy Extension Profile Converter
+ * Pure TypeScript implementation with zero external runtime dependencies.
  */
 
-function createEmptyProfileData() {
+import type {
+  Profile,
+  CompanyProfile,
+  DailyHours,
+  BusinessHours
+} from '../types/domain.js';
+
+interface LegacyFieldRaw {
+  id?: string;
+  name?: string;
+  value?: unknown;
+  category?: string;
+  type?: string;
+  [key: string]: unknown;
+}
+
+export interface LegacyProfileRaw {
+  id?: string;
+  name?: string;
+  createdAt?: string | number;
+  updatedAt?: string | number;
+  fields?: Record<string, LegacyFieldRaw> | LegacyFieldRaw[];
+  [key: string]: unknown;
+}
+
+function createEmptyProfileData(): CompanyProfile {
+  const weekday: DailyHours = { open: '07:00', close: '18:00', closed: false };
+  const openingHours: BusinessHours = {
+    monday: { ...weekday },
+    tuesday: { ...weekday },
+    wednesday: { ...weekday },
+    thursday: { ...weekday },
+    friday: { ...weekday },
+    saturday: { open: '08:00', close: '16:00', closed: false },
+    sunday: { open: '', close: '', closed: false, onCall24_7: true },
+    alwaysOpen: false,
+    rawHoursText: ''
+  };
   return {
     businessName: '',
     tradingName: '',
@@ -15,24 +53,14 @@ function createEmptyProfileData() {
     website: '',
     address: { street: '', city: '', state: '', postalCode: '', country: '' },
     services: [],
-    openingHours: {
-      monday: { open: '07:00', close: '18:00', closed: false },
-      tuesday: { open: '07:00', close: '18:00', closed: false },
-      wednesday: { open: '07:00', close: '18:00', closed: false },
-      thursday: { open: '07:00', close: '18:00', closed: false },
-      friday: { open: '07:00', close: '18:00', closed: false },
-      saturday: { open: '08:00', close: '16:00', closed: false },
-      sunday: { open: '', close: '', closed: false, onCall24_7: true },
-      alwaysOpen: false,
-      rawHoursText: ''
-    },
+    openingHours,
     descriptions: { short: '', full: '', tagline: '' },
     faqs: [],
     customFields: []
   };
 }
 
-function processContactField(id, name, val, parsed) {
+function processContactField(id: string, name: string, val: string, parsed: CompanyProfile): boolean {
   if (id === 'fullname' || name === 'full name') parsed.contactName = val;
   else if (id === 'firstname' || name === 'first name') parsed.firstName = val;
   else if (id === 'lastname' || name === 'last name') parsed.lastName = val;
@@ -43,7 +71,7 @@ function processContactField(id, name, val, parsed) {
   return true;
 }
 
-function processAddressField(id, name, val, parsed) {
+function processAddressField(id: string, name: string, val: string, parsed: CompanyProfile): boolean {
   if (id === 'address' || name === 'address' || id.includes('street')) parsed.address.street = val;
   else if (id === 'city' || name === 'city' || id === 'suburb') parsed.address.city = val;
   else if (id === 'state' || name === 'state' || id === 'region') parsed.address.state = val;
@@ -53,21 +81,21 @@ function processAddressField(id, name, val, parsed) {
   return true;
 }
 
-function processFaqBlock(val, parsed) {
+function processFaqBlock(val: string, parsed: CompanyProfile): void {
   const qaBlocks = val.split(/(?=Q\))/gi);
   for (const block of qaBlocks) {
     const trimmed = block.trim();
     if (!trimmed) continue;
     const match = trimmed.match(/^Q\)\s*([\s\S]*?)\s*A\)\s*([\s\S]*)$/i);
     if (match) {
-      parsed.faqs.push({ q: match[1].trim(), a: match[2].trim() });
+      parsed.faqs.push({ q: match[1]?.trim() || '', a: match[2]?.trim() || '' });
     } else {
       parsed.faqs.push({ q: 'General Inquiry', a: trimmed });
     }
   }
 }
 
-function processContentField(id, name, val, parsed) {
+function processContentField(id: string, name: string, val: string, parsed: CompanyProfile): void {
   if (name.includes('services provided') || id.includes('service')) {
     parsed.services = val.split(/,|\n/).map((s) => s.trim()).filter(Boolean);
   } else if (name.includes('faq') || name.includes('frequently asked')) {
@@ -85,12 +113,13 @@ function processContentField(id, name, val, parsed) {
   }
 }
 
-function inferBusinessName(parsedData, profileName) {
+function inferBusinessName(parsedData: CompanyProfile, profileName: string): string {
   if (parsedData.businessName) return parsedData.businessName;
   if (parsedData.website) {
     try {
-      const domain = new URL(parsedData.website).hostname.replace('www.', '').split('.')[0];
-      return domain.charAt(0).toUpperCase() + domain.slice(1);
+      const urlStr = parsedData.website.startsWith('http') ? parsedData.website : `https://${parsedData.website}`;
+      const domain = new URL(urlStr).hostname.replace('www.', '').split('.')[0];
+      if (domain) return domain.charAt(0).toUpperCase() + domain.slice(1);
     } catch (_e) {
       return profileName;
     }
@@ -98,13 +127,16 @@ function inferBusinessName(parsedData, profileName) {
   return profileName;
 }
 
-export function parseLegacyProfile(legacyProfile) {
-  const profileId = legacyProfile.id || ('prof_' + Math.random().toString(36).substring(2, 8));
-  const profileName = legacyProfile.name || 'Imported Profile';
-  const createdAt = legacyProfile.createdAt ? new Date(legacyProfile.createdAt).getTime() : Date.now();
-  const updatedAt = legacyProfile.updatedAt ? new Date(legacyProfile.updatedAt).getTime() : Date.now();
+export function parseLegacyProfile(legacyProfile: LegacyProfileRaw | unknown): Profile {
+  const raw = (typeof legacyProfile === 'object' && legacyProfile !== null ? legacyProfile : {}) as LegacyProfileRaw;
+  const profileId = raw.id || ('prof_' + Math.random().toString(36).substring(2, 8));
+  const profileName = raw.name || 'Imported Profile';
+  const rawCreated = raw.createdAt ? new Date(raw.createdAt).getTime() : Date.now();
+  const rawUpdated = raw.updatedAt ? new Date(raw.updatedAt).getTime() : Date.now();
+  const createdAt = Number.isNaN(rawCreated) ? Date.now() : rawCreated;
+  const updatedAt = Number.isNaN(rawUpdated) ? Date.now() : rawUpdated;
 
-  const rawFields = legacyProfile.fields || {};
+  const rawFields = raw.fields || {};
   const fieldList = Array.isArray(rawFields) ? rawFields : Object.values(rawFields);
   const parsedData = createEmptyProfileData();
 
