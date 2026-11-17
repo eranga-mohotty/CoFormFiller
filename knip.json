@@ -8,6 +8,7 @@
     "src/engine/pattern-matcher.{js,ts}",
     "src/options/options.{js,ts}",
     "src/popup/popup.{js,ts}",
+    "src/types/index.{js,ts}",
     "test/*.{js,ts}",
     "build.js"
   ],
