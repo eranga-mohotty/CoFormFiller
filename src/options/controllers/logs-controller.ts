@@ -5,8 +5,27 @@
 
 import { $, showToast } from './common.js';
 import { getFillLogs, clearFillLogs } from '../../services/storage.js';
+import type { LogEntry } from '../../types/storage.js';
 
-function createLogRow(log) {
+function createInspectButton(log: LogEntry): HTMLButtonElement {
+  const btn = document.createElement('button');
+  btn.className = 'btn secondary-btn btn-inspect';
+  btn.style.padding = '4px 10px';
+  btn.style.fontSize = '11.5px';
+  btn.textContent = 'Inspect';
+  btn.addEventListener('click', () => {
+    const promptBox = $<HTMLTextAreaElement>('inspectPromptText');
+    const respBox = $<HTMLTextAreaElement>('inspectResponseText');
+    if (promptBox) promptBox.value = log.lastPrompt || 'None';
+    if (respBox) respBox.value = log.lastResponse || 'None';
+    const card = $('aiInspectorCard');
+    card?.classList.remove('hidden');
+    card?.scrollIntoView({ behavior: 'smooth' });
+  });
+  return btn;
+}
+
+function createLogRow(log: LogEntry): HTMLTableRowElement {
   const tr = document.createElement('tr');
 
   const tdTime = document.createElement('td');
@@ -26,18 +45,7 @@ function createLogRow(log) {
 
   const tdAction = document.createElement('td');
   if (log.lastPrompt) {
-    const btn = document.createElement('button');
-    btn.className = 'btn secondary-btn btn-inspect';
-    btn.style.padding = '4px 10px';
-    btn.style.fontSize = '11.5px';
-    btn.textContent = 'Inspect';
-    btn.addEventListener('click', () => {
-      $('inspectPromptText').value = log.lastPrompt || 'None';
-      $('inspectResponseText').value = log.lastResponse || 'None';
-      $('aiInspectorCard')?.classList.remove('hidden');
-      $('aiInspectorCard')?.scrollIntoView({ behavior: 'smooth' });
-    });
-    tdAction.appendChild(btn);
+    tdAction.appendChild(createInspectButton(log));
   } else {
     tdAction.textContent = '—';
   }
@@ -46,7 +54,7 @@ function createLogRow(log) {
   return tr;
 }
 
-export async function renderLogsTab() {
+export async function renderLogsTab(): Promise<void> {
   const logs = await getFillLogs();
   if (!logs || logs.length === 0) {
     $('logsEmptyNotice')?.classList.remove('hidden');
@@ -58,12 +66,13 @@ export async function renderLogsTab() {
   $('logsEmptyNotice')?.classList.add('hidden');
   $('logsTableContainer')?.classList.remove('hidden');
   const tbody = $('logsTableBody');
-  tbody.replaceChildren();
-
-  logs.forEach((log) => tbody.appendChild(createLogRow(log)));
+  if (tbody) {
+    tbody.replaceChildren();
+    logs.forEach((log) => tbody.appendChild(createLogRow(log)));
+  }
 }
 
-export function initLogsController() {
+export function initLogsController(): void {
   $('btnClearLogs')?.addEventListener('click', async () => {
     if (confirm('Clear all fill history?')) {
       await clearFillLogs();

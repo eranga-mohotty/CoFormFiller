@@ -3,9 +3,17 @@
  * Safely constructs DOM nodes without innerHTML
  */
 
-let learnPromptEl = null;
+let learnPromptEl: HTMLDivElement | null = null;
+let autoDismissTimer: ReturnType<typeof setTimeout> | null = null;
 
-function getOrCreateLearnPrompt() {
+function clearAutoDismissTimer(): void {
+  if (autoDismissTimer !== null) {
+    clearTimeout(autoDismissTimer);
+    autoDismissTimer = null;
+  }
+}
+
+function getOrCreateLearnPrompt(): HTMLDivElement {
   if (!learnPromptEl) {
     learnPromptEl = document.createElement('div');
     learnPromptEl.id = 'smartform-learn-prompt';
@@ -14,15 +22,14 @@ function getOrCreateLearnPrompt() {
   return learnPromptEl;
 }
 
-function hideLearnPrompt() {
+function hideLearnPrompt(): void {
   if (learnPromptEl) {
     learnPromptEl.className = '';
-    const lp = /** @type {any} */ (learnPromptEl);
-    if (lp._autoDismissTimer) clearTimeout(lp._autoDismissTimer);
+    clearAutoDismissTimer();
   }
 }
 
-function buildHeader(profileName, onDismiss) {
+function buildHeader(profileName: string, onDismiss?: () => void): HTMLDivElement {
   const header = document.createElement('div');
   header.className = 'smartform-learn-header';
 
@@ -35,7 +42,7 @@ function buildHeader(profileName, onDismiss) {
   closeBtn.className = 'smartform-learn-close';
   closeBtn.title = 'Dismiss';
   closeBtn.textContent = '×';
-  closeBtn.addEventListener('click', (e) => {
+  closeBtn.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault();
     hideLearnPrompt();
     if (onDismiss) onDismiss();
@@ -44,7 +51,7 @@ function buildHeader(profileName, onDismiss) {
   return header;
 }
 
-function buildContent(key, value) {
+function buildContent(key: string, value: string): HTMLDivElement {
   const content = document.createElement('div');
   content.className = 'smartform-learn-content';
 
@@ -64,14 +71,17 @@ function buildContent(key, value) {
   return content;
 }
 
-function buildActions(onSave, onDismiss) {
+function buildActions(
+  onSave?: () => void | Promise<void>,
+  onDismiss?: () => void
+): HTMLDivElement {
   const actions = document.createElement('div');
   actions.className = 'smartform-learn-actions';
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'smartform-learn-save-btn';
   saveBtn.textContent = 'Save to Profile';
-  saveBtn.addEventListener('click', async (e) => {
+  saveBtn.addEventListener('click', async (e: MouseEvent) => {
     e.preventDefault();
     hideLearnPrompt();
     if (onSave) await onSave();
@@ -81,7 +91,7 @@ function buildActions(onSave, onDismiss) {
   const dismissBtn = document.createElement('button');
   dismissBtn.className = 'smartform-learn-dismiss-btn';
   dismissBtn.textContent = 'Dismiss';
-  dismissBtn.addEventListener('click', (e) => {
+  dismissBtn.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault();
     hideLearnPrompt();
     if (onDismiss) onDismiss();
@@ -91,10 +101,15 @@ function buildActions(onSave, onDismiss) {
   return actions;
 }
 
-export function showLearnPrompt(key, value, profileName, onSave, onDismiss) {
+export function showLearnPrompt(
+  key: string,
+  value: string,
+  profileName?: string,
+  onSave?: () => void | Promise<void>,
+  onDismiss?: () => void
+): void {
   const prompt = getOrCreateLearnPrompt();
-  const lp = /** @type {any} */ (prompt);
-  if (lp._autoDismissTimer) clearTimeout(lp._autoDismissTimer);
+  clearAutoDismissTimer();
 
   prompt.replaceChildren(
     buildHeader(profileName || 'Active Profile', onDismiss),
@@ -103,7 +118,7 @@ export function showLearnPrompt(key, value, profileName, onSave, onDismiss) {
   );
 
   prompt.className = 'show';
-  lp._autoDismissTimer = setTimeout(() => {
+  autoDismissTimer = setTimeout(() => {
     hideLearnPrompt();
   }, 20000);
 }

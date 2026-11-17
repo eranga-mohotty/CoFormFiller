@@ -11,7 +11,7 @@ import { initVaultController, renderVaultStatus } from './controllers/vault-cont
 import { initImportExportController } from './controllers/import-export-controller.js';
 import { initLogsController, renderLogsTab } from './controllers/logs-controller.js';
 
-async function refreshAllControllers() {
+async function refreshAllControllers(): Promise<void> {
   await renderVaultStatus();
   await loadProfilesDropdown();
   await loadAiSettings();
@@ -22,13 +22,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const initialSettings = await getSettings();
 
   initTabNavigation((tabId) => {
-    if (tabId === 'tab-logs') renderLogsTab();
+    if (tabId === 'tab-logs') void renderLogsTab();
   });
 
   initInterfaceMode(Boolean(initialSettings.advancedMode), {
     onModeChange: () => updateOllamaTipVisibility(),
     onSimpleModeReset: () => {
-      const geminiRadio = /** @type {HTMLInputElement} */ (document.querySelector('input[name="aiProvider"][value="gemini"]'));
+      const geminiRadio = document.querySelector<HTMLInputElement>('input[name="aiProvider"][value="gemini"]');
       if (geminiRadio) {
         geminiRadio.checked = true;
         updateProviderPanels('gemini');

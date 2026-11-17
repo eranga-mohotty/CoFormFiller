@@ -3,12 +3,15 @@
  * Safely manages button states without innerHTML
  */
 
-let floatingContainer = null;
-let buttonEl = null;
+import type { FloatingButtonPosition } from '../types/index.js';
 
-function renderButtonIdle() {
+let floatingContainer: HTMLDivElement | null = null;
+let buttonEl: HTMLButtonElement | null = null;
+
+function renderButtonIdle(): void {
   if (!buttonEl) return;
   buttonEl.classList.remove('loading');
+
   const sparkle = document.createElement('span');
   sparkle.className = 'smartform-btn-sparkle';
   sparkle.textContent = '✨';
@@ -20,9 +23,10 @@ function renderButtonIdle() {
   buttonEl.replaceChildren(sparkle, text);
 }
 
-export function setButtonLoading(statusText = 'Scanning...') {
+export function setButtonLoading(statusText = 'Scanning...'): void {
   if (!buttonEl) return;
   buttonEl.classList.add('loading');
+
   const spinner = document.createElement('span');
   spinner.className = 'smartform-spinner';
 
@@ -33,11 +37,11 @@ export function setButtonLoading(statusText = 'Scanning...') {
   buttonEl.replaceChildren(spinner, text);
 }
 
-export function resetFloatingButton() {
+export function resetFloatingButton(): void {
   renderButtonIdle();
 }
 
-export function removeFloatingButton() {
+export function removeFloatingButton(): void {
   if (floatingContainer) {
     floatingContainer.remove();
     floatingContainer = null;
@@ -45,7 +49,10 @@ export function removeFloatingButton() {
   }
 }
 
-export function ensureFloatingButton(onTrigger, position = 'bottom-right') {
+export function ensureFloatingButton(
+  onTrigger?: () => void | Promise<void>,
+  position: FloatingButtonPosition = 'bottom-right'
+): void {
   if (floatingContainer && floatingContainer.isConnected) return;
   if (floatingContainer) floatingContainer.remove();
 
@@ -57,10 +64,10 @@ export function ensureFloatingButton(onTrigger, position = 'bottom-right') {
   buttonEl.className = 'smartform-float-btn';
   renderButtonIdle();
 
-  buttonEl.addEventListener('click', (e) => {
+  buttonEl.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (onTrigger) onTrigger();
+    if (onTrigger) void onTrigger();
   });
 
   floatingContainer.appendChild(buttonEl);

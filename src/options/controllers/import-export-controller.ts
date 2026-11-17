@@ -5,19 +5,21 @@
 
 import { $, showToast } from './common.js';
 import { importConfiguration, exportConfiguration } from '../../utils/importer.js';
+import type { ImportResult, ImportMode } from '../../types/storage.js';
 
-function handleFileRead(file) {
+function handleFileRead(file: File): void {
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = (e: ProgressEvent<FileReader>) => {
     const text = typeof e.target?.result === 'string' ? e.target.result : '';
-    $('importTextarea').value = text;
+    const textarea = $<HTMLTextAreaElement>('importTextarea');
+    if (textarea) textarea.value = text;
     $('importPasswordPrompt')?.classList.add('hidden');
     showToast(`File "${file.name}" loaded.`);
   };
   reader.readAsText(file);
 }
 
-function renderImportSuccess(statusBox, res) {
+function renderImportSuccess(statusBox: HTMLElement, res: ImportResult): void {
   statusBox.className = 'status-box success';
   statusBox.replaceChildren();
 
@@ -26,9 +28,9 @@ function renderImportSuccess(statusBox, res) {
   statusBox.append(strong, document.createElement('br'));
 
   const items = [
-    `• Format: ${res.formatDetected}`,
-    `• Profiles Imported: ${res.profilesImported}`,
-    `• Active Profile: "${res.activeProfileName}"`,
+    `• Format: ${res.formatDetected || 'Unknown'}`,
+    `• Profiles Imported: ${res.profilesImported ?? 0}`,
+    `• Active Profile: "${res.activeProfileName || ''}"`,
     `• API Key Detected: ${res.apiKeyDetected ? 'Yes' : 'None'}`
   ];
 
@@ -37,12 +39,15 @@ function renderImportSuccess(statusBox, res) {
   });
 }
 
-async function processImport(passphrase = '', onImportComplete) {
-  const text = $('importTextarea')?.value.trim();
+async function processImport(passphrase = '', onImportComplete?: () => Promise<void> | void): Promise<void> {
+  const text = $<HTMLTextAreaElement>('importTextarea')?.value.trim();
   if (!text) return alert('Please paste JSON or upload a file first.');
 
-  const mode = (/** @type {HTMLInputElement | null} */ (document.querySelector('input[name="importMode"]:checked')))?.value || 'replace';
+  const checkedRadio = document.querySelector<HTMLInputElement>('input[name="importMode"]:checked');
+  const mode = (checkedRadio?.value as ImportMode) || 'replace';
   const statusBox = $('importStatusBox');
+  if (!statusBox) return;
+
   statusBox.className = 'status-box';
   statusBox.textContent = 'Processing configuration...';
   statusBox.classList.remove('hidden');
@@ -51,9 +56,9 @@ async function processImport(passphrase = '', onImportComplete) {
     const res = await importConfiguration(text, mode, { passphrase });
     if (res.needsPassword) {
       $('importPasswordPrompt')?.classList.remove('hidden');
-      $('importPassphraseInput')?.focus();
+      $<HTMLInputElement>('importPassphraseInput')?.focus();
       statusBox.className = 'status-box error';
-      statusBox.textContent = res.message;
+      statusBox.textContent = res.message || 'Password required.';
       return;
     }
 
@@ -64,21 +69,23 @@ async function processImport(passphrase = '', onImportComplete) {
       if (onImportComplete) await onImportComplete();
     } else {
       statusBox.className = 'status-box error';
-      statusBox.textContent = 'Import failed: ' + res.message;
+      statusBox.textContent = 'Import failed: ' + (res.message || 'Unknown error');
     }
-  } catch (err) {
+  } catch (err: unknown) {
     statusBox.className = 'status-box error';
-    statusBox.textContent = 'Import error: ' + err.message;
+    statusBox.textContent = 'Import error: ' + (err instanceof Error ? err.message : String(err));
   }
 }
 
-async function executeExport() {
-  const includeKey = $('exportIncludeApiKey')?.checked || false;
-  const isEncrypted = (/** @type {HTMLInputElement | null} */ (document.querySelector('input[name="exportFormatMode"]:checked')))?.value === 'encrypted';
+async function executeExport(): Promise<void> {
+  const includeKey = $<HTMLInputElement>('exportIncludeApiKey')?.checked || false;
+  const formatRadio = document.querySelector<HTMLInputElement>('input[name="exportFormatMode"]:checked');
+  const isEncrypted = formatRadio?.value === 'encrypted';
   let passphrase = '';
 
   if (isEncrypted) {
-    passphrase = $('exportCustomPassphrase')?.value.trim() || prompt('Enter a Master PIN or Password to encrypt this backup:');
+    const customPass = $<HTMLInputElement>('exportCustomPassphrase')?.value.trim();
+    passphrase = customPass || prompt('Enter a Master PIN or Password to encrypt this backup:') || '';
     if (!passphrase) return showToast('Export cancelled (password required for encrypted backup).', true);
   }
 
@@ -94,34 +101,39 @@ async function executeExport() {
     a.remove();
     URL.revokeObjectURL(url);
     showToast(`Export downloaded (${isEncrypted ? 'Encrypted Vault' : 'Plaintext JSON'})!`);
-  } catch (err) {
-    showToast('Export failed: ' + err.message, true);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    showToast('Export failed: ' + msg, true);
   }
 }
 
-export function initImportExportController(onImportComplete) {
-  document.querySelectorAll('input[name="exportFormatMode"]').forEach((radioEl) => {
-    const radio = /** @type {HTMLInputElement} */ (radioEl);
+export function initImportExportController(onImportComplete?: () => Promise<void> | void): void {
+  document.querySelectorAll<HTMLInputElement>('input[name="exportFormatMode"]').forEach((radio) => {
     radio.addEventListener('change', () => {
       $('exportCustomPassphraseGroup')?.classList.toggle('hidden', radio.value !== 'encrypted');
     });
   });
 
   const dropZone = $('dropZone');
-  dropZone?.addEventListener('click', () => $('fileUploadInput')?.click());
-  dropZone?.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone?.addEventListener('click', () => $<HTMLInputElement>('fileUploadInput')?.click());
+  dropZone?.addEventListener('dragover', (e: DragEvent) => { e.preventDefault(); dropZone.classList.add('dragover'); });
   dropZone?.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone?.addEventListener('drop', (e) => {
+  dropZone?.addEventListener('drop', (e: DragEvent) => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
-    if (e.dataTransfer?.files?.[0]) handleFileRead(e.dataTransfer.files[0]);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleFileRead(file);
   });
 
-  $('fileUploadInput')?.addEventListener('change', () => {
-    if ($('fileUploadInput').files?.[0]) handleFileRead($('fileUploadInput').files[0]);
+  const fileInput = $<HTMLInputElement>('fileUploadInput');
+  fileInput?.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (file) handleFileRead(file);
   });
 
-  $('btnExecuteImport')?.addEventListener('click', () => processImport('', onImportComplete));
-  $('btnDecryptImport')?.addEventListener('click', () => processImport($('importPassphraseInput')?.value || '', onImportComplete));
-  $('btnExecuteExport')?.addEventListener('click', executeExport);
+  $('btnExecuteImport')?.addEventListener('click', () => { void processImport('', onImportComplete); });
+  $('btnDecryptImport')?.addEventListener('click', () => {
+    void processImport($<HTMLInputElement>('importPassphraseInput')?.value || '', onImportComplete);
+  });
+  $('btnExecuteExport')?.addEventListener('click', () => { void executeExport(); });
 }
