@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+  path_filters:
+    - "!dist/**"
+    - "!test-forms/**"
+    - "!package-lock.json"
+    - "!*.min.js"
+    - "!*.map"
+  path_instructions:
+    - path: "src/**"
+      instructions: |
+        Review strictly against SmartForm AI's Manifest V3 architecture:
+        - Security & DOM Safety: Forbid innerHTML, outerHTML, document.write, eval, or new Function. DOM creation must use safe APIs (document.createElement, textContent, replaceChildren).
+        - Zero Runtime Dependencies: The extension runtime must use Web Platform APIs exclusively. Reject adding new packages to 'dependencies' in package.json.
+        - Privacy & Sensitive Data: Sensitive inputs (passwords, OTPs, CVVs, credit card details, SSNs) must never be passed to AI prompts, storage logs, or learning mode.
+        - Untrusted AI Output: Model responses are untrusted input. Field IDs must be validated against the scanned element whitelist before modifying any DOM element.
+        - Web Crypto & Vault Security: AES-256-GCM encryption and PBKDF2 key derivation parameters in src/services/crypto.ts must never be weakened or bypassed.
+    - path: "src/background/**"
+      instructions: |
+        - Manifest V3 Service Worker: Service workers terminate at any time; never rely on in-memory global state persisting across runs. Durable state must go through chrome.storage.
+        - Asynchronous Messaging: Async chrome.runtime.onMessage listeners that invoke sendResponse asynchronously must return boolean true synchronously.
+chat:
+  auto_reply: true

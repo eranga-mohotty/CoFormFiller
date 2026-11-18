@@ -204,4 +204,12 @@ npm run test:challenger
 npm run verify
 ```
 
+---
+
+## CI/CD & Automated Code Review
+
+- **GitHub Actions Pipeline**: Automatically executes on every push and pull request to `main`. Runs `lint`, `type-check`, `knip`, core test suites, and empirical challenger tests, bundles the extension, and saves a pre-packaged `smartform-ai-extension.zip` build artifact inside the Actions run for rapid testing.
+- **Releases**: Pushing a version tag (`git tag v0.1.0-alpha && git push origin v0.1.0-alpha`) automatically builds and publishes a formal GitHub Release with changelog release notes and the production extension `.zip` attached.
+- **CodeRabbit AI Review**: Pull requests are reviewed by the open-source [CodeRabbit](https://coderabbit.ai) GitHub App, enforcing architectural and security rules configured in `.coderabbit.yaml`.
+
 > For guidelines, architectural constraints, and rules binding on all human and AI contributors, consult [AGENTS.md](AGENTS.md).
