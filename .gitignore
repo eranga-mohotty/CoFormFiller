@@ -20,5 +20,5 @@ plans/
 # Build Output
 dist/
 
-# Multi-agent coordination logs
-.agents/teamwork/
+# Agent workspace & coordination
+.agents/
