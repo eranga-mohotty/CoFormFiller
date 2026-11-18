@@ -1,10 +1,10 @@
 # AGENTS.md — SmartForm AI Autonomous Agent Operating Guide
 
-> **Target Audience**: AI Coding Agents (Claude Code, Cursor, Gemini CLI, Antigravity, Copilot) & Human Engineers.  
-> **Status**: Invariant Reference & System Standard  
-> **Repository**: [smartform-ai-extension](file:///home/eranga/.gemini/antigravity/scratch/smartform-ai-extension)
+> **Target Audience**: AI Coding Agents & Engineers  
+> **Project**: SmartForm AI (Manifest V3 Browser Extension)  
+> **Repository Standard**: Strict TypeScript, Zero-Warning Build, Clean Architecture
 
-This document is the **single source of truth** for working on this repository. Even if prior chat sessions or instructions are deleted, any agent or developer reading this guide can immediately navigate, build, extend, test, and maintain the codebase with zero regression risk.
+This document establishes the binding rules, system architecture, and verification standards for this repository. Every agent or contributor working on this codebase is required to adhere to these rules and keep this document up to date whenever changes occur.
 
 ---
 
@@ -33,7 +33,7 @@ The source code resides in `src/` and is bundled by `build.js` into `dist/`.
 
 ```
 src/
-├── types/                      # Centralized TypeScript definitions (Wave 0)
+├── types/                      # Centralized TypeScript definitions
 │   ├── domain.ts               # Profile, ContactInfo, BusinessHours, FaqItem, LearnedField
 │   ├── storage.ts              # Local/Session storage schemas, EncryptedVault, VaultStatus
 │   ├── messages.ts             # ExtensionMessage discriminated union & response envelopes
